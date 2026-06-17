@@ -101,6 +101,7 @@ Per the
    - **Repository permissions:**
      - *Administration* → Read-only
      - *Checks* → Read & write
+     - *Pull requests* → Read & write
      - *Contents* → Read-only
      - *Metadata* → Read-only (mandatory)
    - **Organization permissions:**
