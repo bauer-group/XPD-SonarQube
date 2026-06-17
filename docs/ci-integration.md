@@ -64,6 +64,73 @@ Two integration levels — pick per repository:
 
 ---
 
+## GitHub App vs. the scanner (you need both)
+
+Connecting SonarQube to GitHub via a **GitHub App** does **not** replace the CI
+workflow — they do different jobs:
+
+- **The scanner (CI workflow) does the analysis** — it clones the code, scans
+  it and uploads the report. SonarQube Server **never fetches or analyses code
+  itself** (there is no auto-analysis on the self-hosted server).
+- **The GitHub App connects SonarQube to GitHub** — pull-request decoration
+  (quality-gate check + issue comments), repository/project import, and
+  optionally GitHub login. It runs **no** analysis.
+
+```text
+push / PR ─▶ CI workflow ─▶ scanner ─▶ SonarQube (analysis + quality gate)
+                                              │
+                                  GitHub App  ▼
+                                    PR gets the check + comments
+```
+
+Without the workflow nothing is analysed; without the App there's no PR
+decoration. The bundled **Community Branch Plugin uses this GitHub App
+configuration** to decorate pull requests.
+
+### Set up the GitHub App (once, org-wide)
+
+1. **GitHub → Org → Settings → Developer settings → GitHub Apps → New GitHub App**
+   - **Name:** e.g. `SonarQube`; **Homepage URL:** `https://sonarqube.development.app.bauer-group.com`
+   - **Webhook:** untick *Active* (not needed for decoration)
+   - **Repository permissions:**
+     - *Checks* → Read & write
+     - *Pull requests* → Read & write
+     - *Commit statuses* → Read & write
+     - *Contents* → Read-only
+     - *Metadata* → Read-only (mandatory)
+   - **For GitHub login too (optional):** *Account permissions → Email addresses
+     → Read-only*, and set the **Callback URL**
+     `https://sonarqube.development.app.bauer-group.com/oauth2/callback/github`
+   - **Where can this app be installed:** Only on this account
+   - Create it, then **note the App ID**, **generate a private key** (`.pem`),
+     and — only for login — **generate a Client secret** and note the Client ID.
+2. **Install the App** on the org (all or selected repos): the App's page →
+   *Install App*.
+3. **SonarQube → Administration → Configuration → DevOps Platform Integrations →
+   GitHub → Create configuration:**
+   - Configuration name (free text)
+   - GitHub API URL: `https://api.github.com`
+   - **GitHub App ID** + the **private key** (`.pem` contents)
+   - (login only) **Client ID** + **Client secret**
+
+   All of this lives in the SonarQube UI/database — **no env vars** (consistent
+   with [authentication.md](authentication.md)).
+
+### Bind a project (enables PR decoration)
+
+- **New project:** *Projects → Create Project → GitHub* → pick the repo (uses
+  the App), **or**
+- **Existing project:** *Project → Administration → General Settings → DevOps
+  Platform Integration* → select the GitHub configuration + repository.
+- Ensure the CI job grants `pull-requests: write` (see the workflow examples
+  below) so the decoration check can be posted.
+
+> The same GitHub App can also provide **GitHub login** — an alternative to the
+> [Entra ID / Zitadel SSO](authentication.md). Pick one identity provider; you
+> don't need all of them.
+
+---
+
 ## 1. Prerequisites (once per repository)
 
 1. **Grant the repo access to the org secrets** (they exist organization-wide):
