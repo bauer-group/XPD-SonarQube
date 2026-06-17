@@ -54,31 +54,16 @@ rolling out.
 ## Zitadel (generic OIDC)
 
 SonarQube has no native generic-OIDC; this uses the third-party
-[`sonar-auth-oidc`](https://github.com/vaulttec/sonar-auth-oidc) plugin.
+[`sonar-auth-oidc`](https://github.com/vaulttec/sonar-auth-oidc) plugin
+(v3.0.0), which **ships in the wrapper image by default** — verified booting on
+SonarQube 26.5 (the plugin deploys and registers cleanly). To omit it, build
+with `--build-arg INCLUDE_OIDC_PLUGIN=false`.
 
-> **⚠ Compatibility:** the latest plugin (`v3.0.0`) targets SonarQube
-> **2025.x**. Its compatibility with the **26.x** line is **not yet confirmed** —
-> a plugin SonarQube rejects can stop it from starting. Verify on a non-prod
-> instance first; if incompatible, stay on SAML until the plugin updates, or
-> pin SonarQube to a plugin-supported version.
-
-**1. Build the wrapper image with the plugin (opt-in, off by default):**
-
-```bash
-docker build \
-  --build-arg INCLUDE_OIDC_PLUGIN=true \
-  --build-arg OIDC_PLUGIN_VERSION=3.0.0 \
-  -t ghcr.io/bauer-group/xpd-sonarqube/sonarqube:oidc ./src/sonarqube
-```
-
-Point `SONARQUBE_IMAGE`/`SONARQUBE_VERSION` at that image, or enable
-`INCLUDE_OIDC_PLUGIN` in the CI build once compatibility is confirmed.
-
-**2. Zitadel:** create an application of type **Web / OIDC**, set the redirect
+**1. Zitadel:** create an application of type **Web / OIDC**, set the redirect
 URI to `https://<your-host>/oauth2/callback/oidc`, and note the **Issuer**,
 **Client ID** and **Client Secret**.
 
-**3. SonarQube → Administration → Authentication → OpenID Connect** (property keys):
+**2. SonarQube → Administration → Authentication → OpenID Connect** (property keys):
 
 | UI field | Property | Example |
 | --- | --- | --- |
