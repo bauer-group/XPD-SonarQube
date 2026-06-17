@@ -28,6 +28,13 @@ permissions:
   packages: write
   security-events: write
 
+# Serialize release runs on a branch so concurrent runs never race on the
+# semantic-release git push (the "rejected push loop"). Queue, never cancel —
+# an in-flight publish must finish.
+concurrency:
+  group: docker-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # ============================================
   # Validation Jobs
