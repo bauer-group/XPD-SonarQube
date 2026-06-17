@@ -79,10 +79,14 @@ jobs:
             echo "::error::could not resolve a SonarQube tag for plugin ${plugin:-<none>} (minor ${minor:-<none>})"
             exit 1
           fi
-          echo "Resolved: SonarQube=${sq}  (latest plugin ${plugin})"
-          # docker/build-push-action expects newline-separated KEY=VALUE pairs,
-          # NOT JSON — one arg here.
-          echo "build-args=SONARQUBE_VERSION=${sq}" >> "$GITHUB_OUTPUT"
+          echo "Resolved pair: SonarQube=${sq}  branch-plugin=${plugin}"
+          # docker/build-push-action expects newline-separated KEY=VALUE pairs.
+          {
+            echo "build-args<<__ARGS__"
+            echo "SONARQUBE_VERSION=${sq}"
+            echo "BRANCH_PLUGIN_VERSION=${plugin}"
+            echo "__ARGS__"
+          } >> "$GITHUB_OUTPUT"
 
   # ============================================
   # Release Job (only on main branch push)

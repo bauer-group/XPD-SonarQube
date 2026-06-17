@@ -38,14 +38,18 @@ USER backup
 
 VOLUME ["/data"]
 
-# OCI / BAUER GROUP labels
-LABEL org.opencontainers.image.title="SonarQube Backup Sidecar"
-LABEL org.opencontainers.image.description="Scheduled PostgreSQL backup for the SonarQube stack (BAUER GROUP Edition)"
-LABEL org.opencontainers.image.vendor="BAUER GROUP"
-LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.source="https://github.com/bauer-group/XPD-SonarQube"
-LABEL com.bauer-group.image.component="backup"
-LABEL com.bauer-group.image.stack="sonarqube"
+# OCI / BAUER GROUP labels (image.{version,revision,created} are injected by CI)
+LABEL org.opencontainers.image.title="SonarQube Backup Sidecar" \
+      org.opencontainers.image.description="Scheduled PostgreSQL backup for the SonarQube stack (BAUER GROUP Edition)" \
+      org.opencontainers.image.vendor="BAUER GROUP" \
+      org.opencontainers.image.authors="Karl Bauer <karl.bauer@bauer-group.com>" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/bauer-group/XPD-SonarQube" \
+      org.opencontainers.image.url="https://github.com/bauer-group/XPD-SonarQube" \
+      org.opencontainers.image.documentation="https://github.com/bauer-group/XPD-SonarQube/blob/main/src/sonarqube-backup/README.md" \
+      org.opencontainers.image.base.name="docker.io/library/python:3.14-alpine" \
+      com.bauer-group.image.component="backup" \
+      com.bauer-group.image.stack="sonarqube"
 
 # Default: run the scheduler. Override with `--now`, `list`, `verify`, `restore`.
 ENTRYPOINT ["python", "-m", "src.main"]
