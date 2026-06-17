@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/bauer-group/XPD-SonarQube/compare/v1.2.0...v1.2.1) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* **compose:** guarded sysctl init to never lower kernel limits ([f9bd30a](https://github.com/bauer-group/XPD-SonarQube/commit/f9bd30a7547d722875aa1a435f5e6bea1f1debaf))
+
 ## [1.2.0](https://github.com/bauer-group/XPD-SonarQube/compare/v1.1.0...v1.2.0) (2026-06-17)
 
 ### 🚀 Features
