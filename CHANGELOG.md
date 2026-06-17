@@ -1,3 +1,9 @@
+## [1.0.6](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.5...v1.0.6) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* **ci:** added a self-maintained version label to the Dockerfiles ([70b14f2](https://github.com/bauer-group/XPD-SonarQube/commit/70b14f226f7b43f4c0c9823ae062bc544da88110))
+
 ## [1.0.5](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.4...v1.0.5) (2026-06-17)
 
 ### 🐛 Bug Fixes
