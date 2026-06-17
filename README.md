@@ -125,6 +125,8 @@ See [docs/backup.md](docs/backup.md) for the full backup/restore playbook.
 ## Documentation
 
 - [docs/installation.md](docs/installation.md) — development / traefik / coolify
+- [docs/security.md](docs/security.md) — users, admin bootstrap, secrets, runtime hardening
+- [docs/authentication.md](docs/authentication.md) — SSO: Entra ID (SAML) & Zitadel (OIDC)
 - [docs/reverse-proxy.md](docs/reverse-proxy.md) — base URL, forwarded headers, TLS
 - [docs/branch-analysis.md](docs/branch-analysis.md) — Community Branch Plugin
 - [docs/backup.md](docs/backup.md) — backup & restore

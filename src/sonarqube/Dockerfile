@@ -24,22 +24,40 @@
 
 ARG SONARQUBE_VERSION=26.5.0.122743-community
 ARG BRANCH_PLUGIN_VERSION=26.5.0
+# Generic-OIDC SSO (e.g. Zitadel) needs the third-party sonar-auth-oidc plugin.
+# OPT-IN and OFF by default: its SonarQube 26.x compatibility is not yet
+# confirmed (v3.0.0 targets 2025.x) and a mismatched plugin can stop SonarQube
+# from starting. Build with --build-arg INCLUDE_OIDC_PLUGIN=true once verified.
+# SAML SSO (Entra ID) is native and needs no plugin. See docs/authentication.md.
+ARG INCLUDE_OIDC_PLUGIN=false
+ARG OIDC_PLUGIN_VERSION=3.0.0
 
 
-# ── Stage 1: fetch & verify the Community Branch Plugin ──────────────────────
+# ── Stage 1: fetch & verify the plugins ──────────────────────────────────────
 FROM alpine:3.22 AS plugin
 
 ARG BRANCH_PLUGIN_VERSION
 # Optional supply-chain check: pass the JAR's sha256 to verify the download.
 ARG BRANCH_PLUGIN_SHA256=
+ARG INCLUDE_OIDC_PLUGIN
+ARG OIDC_PLUGIN_VERSION
 
 RUN apk add --no-cache curl
 
 RUN set -eux; \
+    mkdir -p /plugins; \
+    # Community Branch Plugin (always)
     url="https://github.com/mc1arke/sonarqube-community-branch-plugin/releases/download/${BRANCH_PLUGIN_VERSION}/sonarqube-community-branch-plugin-${BRANCH_PLUGIN_VERSION}.jar"; \
-    curl --proto "=https" --fail --location --silent --show-error --output /plugin.jar "${url}"; \
+    curl --proto "=https" --fail --location --silent --show-error \
+        --output "/plugins/sonarqube-community-branch-plugin-${BRANCH_PLUGIN_VERSION}.jar" "${url}"; \
     if [ -n "${BRANCH_PLUGIN_SHA256}" ]; then \
-        echo "${BRANCH_PLUGIN_SHA256}  /plugin.jar" | sha256sum -c -; \
+        echo "${BRANCH_PLUGIN_SHA256}  /plugins/sonarqube-community-branch-plugin-${BRANCH_PLUGIN_VERSION}.jar" | sha256sum -c -; \
+    fi; \
+    # sonar-auth-oidc plugin (opt-in, for generic OIDC / Zitadel)
+    if [ "${INCLUDE_OIDC_PLUGIN}" = "true" ]; then \
+        oidc="https://github.com/vaulttec/sonar-auth-oidc/releases/download/v${OIDC_PLUGIN_VERSION}/sonar-auth-oidc-plugin-${OIDC_PLUGIN_VERSION}.jar"; \
+        curl --proto "=https" --fail --location --silent --show-error \
+            --output "/plugins/sonar-auth-oidc-plugin-${OIDC_PLUGIN_VERSION}.jar" "${oidc}"; \
     fi
 
 
@@ -50,11 +68,11 @@ FROM sonarqube:${SONARQUBE_VERSION}
 ARG SONARQUBE_VERSION
 ARG BRANCH_PLUGIN_VERSION
 
-# Bring the verified plugin into the extensions dir. The upstream image runs as
-# uid 1000 with primary group root (gid 0, the OpenShift "arbitrary UID"
-# pattern) — there is no `sonarqube` group, so own it sonarqube:0.
-COPY --from=plugin --chown=sonarqube:0 /plugin.jar \
-     /opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-${BRANCH_PLUGIN_VERSION}.jar
+# Bring the verified plugin(s) into the extensions dir. The upstream image runs
+# as uid 1000 with primary group root (gid 0, the OpenShift "arbitrary UID"
+# pattern) — there is no `sonarqube` group, so own it sonarqube:0. The /plugins
+# dir holds the branch plugin (always) and the OIDC plugin (when opted in).
+COPY --from=plugin --chown=sonarqube:0 /plugins/ /opt/sonarqube/extensions/plugins/
 
 # Activate the plugin as a -javaagent in BOTH the Web and Compute Engine JVMs.
 # Baked into image ENV so they always match the bundled JAR. Keep separate from
