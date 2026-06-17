@@ -50,6 +50,6 @@ the compose files map onto the short names this app reads). Key ones:
 ## Notes
 
 * `pg_dump` major version must be **≥** the PostgreSQL server major — the image
-  installs `postgresql${PG_MAJOR}-client` (default 16). Bump `PG_MAJOR` together
+  installs `postgresql${PG_MAJOR}-client` (default 18). Bump `PG_MAJOR` together
   with `POSTGRES_VERSION`.
 * Tests run during the image build (test-gated) — a failing test fails the build.

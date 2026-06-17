@@ -11,8 +11,8 @@
 FROM python:3.14-alpine
 
 # pg_dump / pg_restore / psql. The client MAJOR must be >= the PostgreSQL
-# server MAJOR — keep PG_MAJOR in step with POSTGRES_VERSION in .env.
-ARG PG_MAJOR=16
+# server MAJOR — keep PG_MAJOR in step with POSTGRES_VERSION in .env (18).
+ARG PG_MAJOR=18
 
 RUN apk add --no-cache "postgresql${PG_MAJOR}-client" tzdata
 

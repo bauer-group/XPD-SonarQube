@@ -19,9 +19,9 @@
     {
       "name": "postgres",
       "image": "postgres",
-      "tag": "16-alpine",
+      "tag": "18-alpine",
       "variable": "POSTGRES_ALPINE_DIGEST",
-      "description": "PostgreSQL database (pulled by compose). Major-pinned, patch-floating — major upgrades are intentional/manual (data migration)."
+      "description": "PostgreSQL 18 (pulled by compose). Major-pinned, patch-floating — major upgrades are intentional/manual (data migration)."
     },
     {
       "name": "busybox",

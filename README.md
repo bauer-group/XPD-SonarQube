@@ -15,7 +15,7 @@ images, `semantic-release`, Dependabot and daily base-image monitoring.
 | --- | --- |
 | 🧪 **Code quality & SAST** | SonarQube Community Build, latest pinned release |
 | 🌿 **Branch & PR analysis** | Community Branch Plugin baked into the wrapper image |
-| 🐘 **PostgreSQL** | Tuned `postgres:16-alpine` (no pgvector needed) |
+| 🐘 **PostgreSQL** | Tuned `postgres:18-alpine` (no pgvector needed) |
 | 🔐 **HTTPS** | Traefik + Let's Encrypt on a dedicated subdomain |
 | ⚙️ **Kernel-ready** | Privileged init sidecar sets `vm.max_map_count` automatically |
 | 💾 **Backups** | Optional scheduled `pg_dump` sidecar (S3 off-site + alerting) |
@@ -87,7 +87,7 @@ drift — there are no version numbers to maintain by hand.
 | -------------- | --------------------- | ------------------------------- |
 | SonarQube base | `sonarqube:community` | CI resolver (plugin-compatible) |
 | Branch plugin  | derived from base     | Dockerfile (no pin)             |
-| PostgreSQL     | `postgres:16-alpine`  | patch-floating                  |
+| PostgreSQL     | `postgres:18-alpine`  | patch-floating                  |
 | Backup base    | `python:3.14-alpine`  | patch-floating + Dependabot     |
 | Init sidecar   | `busybox:stable`      | floating                        |
 | Wrapper images | `sonarqube:latest`    | CI + base-image monitor         |
