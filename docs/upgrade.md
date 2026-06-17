@@ -11,10 +11,12 @@ SonarQube `MAJOR.MINOR`. A mismatch stops SonarQube from starting.
    - The plugin usually trails the newest SonarQube release by a few weeks — pick
      the newest SonarQube `…-community` tag that has a matching plugin release.
 2. Update the pinned defaults in **`src/sonarqube/Dockerfile`**:
+
    ```dockerfile
    ARG SONARQUBE_VERSION=<new>-community
    ARG BRANCH_PLUGIN_VERSION=<new>
    ```
+
    and mirror them in **`.env.example`** (`SONARQUBE_BASE_VERSION`,
    `BRANCH_PLUGIN_VERSION`) and **`.github/config/docker-base-image-monitor/base-images.json`**.
 3. (Optional, recommended) set `BRANCH_PLUGIN_SHA256` to verify the JAR download.
@@ -44,6 +46,6 @@ volume on the new major, and restore.
 ## Base image digest drift
 
 `check-base-images.yml` runs daily and, when an upstream base image digest moves
-on a watched tag (`python:3.13-alpine`, `postgres:16-alpine`, …), triggers
+on a watched tag (`python:*-alpine`, `postgres:16-alpine`, …), triggers
 `docker-release.yml` with `force-release` to rebuild and republish — no manual
 action needed.

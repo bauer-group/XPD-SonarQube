@@ -3,7 +3,7 @@
 # =============================================================================
 # When Dependabot opens a PR bumping a base image inside either:
 #   - src/sonarqube/Dockerfile          (sonarqube:<ver>-community)
-#   - src/sonarqube-backup/Dockerfile   (python:3.13-alpine)
+#   - src/sonarqube-backup/Dockerfile   (python:*-alpine)
 # this workflow auto-approves and merges it (after validation passes), which
 # then triggers docker-release.yml to build and push the updated image.
 # =============================================================================

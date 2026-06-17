@@ -59,7 +59,7 @@ updates:
     commit-message:
       prefix: "chore(docker)"
 
-  # sonarqube-backup base image (python:3.13-alpine in src/sonarqube-backup/Dockerfile)
+  # sonarqube-backup base image (python:*-alpine in src/sonarqube-backup/Dockerfile)
   - package-ecosystem: "docker"
     directory: "/src/sonarqube-backup"
     schedule:
