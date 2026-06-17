@@ -89,32 +89,45 @@ configuration** to decorate pull requests.
 
 ### Set up the GitHub App (once, org-wide)
 
+Per the
+[official SonarQube guide](https://docs.sonarsource.com/sonarqube-community-build/devops-platform-integration/github-integration/setting-up-at-global-level/setting-up-github-app).
+
 1. **GitHub → Org → Settings → Developer settings → GitHub Apps → New GitHub App**
-   - **Name:** e.g. `SonarQube`; **Homepage URL:** `https://sonarqube.development.app.bauer-group.com`
-   - **Webhook:** untick *Active* (not needed for decoration)
+   - **GitHub App name:** e.g. `SonarQube`
+   - **Homepage URL** and **Callback URL:** your SonarQube base URL —
+     `https://sonarqube.development.app.bauer-group.com`
+   - **Webhook:** **clear the *Active* checkbox** and clear the *Webhook URL* and
+     *Webhook secret* fields (not used).
    - **Repository permissions:**
+     - *Administration* → Read-only
      - *Checks* → Read & write
-     - *Pull requests* → Read & write
-     - *Commit statuses* → Read & write
      - *Contents* → Read-only
      - *Metadata* → Read-only (mandatory)
-   - **For GitHub login too (optional):** *Account permissions → Email addresses
-     → Read-only*, and set the **Callback URL**
-     `https://sonarqube.development.app.bauer-group.com/oauth2/callback/github`
+   - **Organization permissions:**
+     - *Administration* → Read-only
+     - *Members* → Read-only
+     - *Projects* → Read-only
+   - **Account permissions:**
+     - *Email addresses* → Read-only
    - **Where can this app be installed:** Only on this account
-   - Create it, then **note the App ID**, **generate a private key** (`.pem`),
-     and — only for login — **generate a Client secret** and note the Client ID.
+   - Create it, then **note the App ID**, **generate a Client secret**, and
+     **generate a private key** (`.pem`).
 2. **Install the App** on the org (all or selected repos): the App's page →
    *Install App*.
 3. **SonarQube → Administration → Configuration → DevOps Platform Integrations →
    GitHub → Create configuration:**
    - Configuration name (free text)
-   - GitHub API URL: `https://api.github.com`
-   - **GitHub App ID** + the **private key** (`.pem` contents)
-   - (login only) **Client ID** + **Client secret**
+   - **GitHub API URL:** `https://api.github.com` (for github.com)
+   - **GitHub App ID**, **Client ID**, **Client secret**, and the **private key**
+     (`.pem` contents)
 
    All of this lives in the SonarQube UI/database — **no env vars** (consistent
    with [authentication.md](authentication.md)).
+
+> The above is the SonarSource-documented permission set (it also covers
+> repository import and GitHub login). The bundled Community Branch Plugin posts
+> PR decoration via the **Checks** permission; if you also want it to leave a
+> summary **comment** on the PR, additionally grant *Pull requests → Read & write*.
 
 ### Bind a project (enables PR decoration)
 
