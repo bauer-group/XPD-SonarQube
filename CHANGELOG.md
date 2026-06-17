@@ -1,3 +1,9 @@
+## [1.2.2](https://github.com/bauer-group/XPD-SonarQube/compare/v1.2.1...v1.2.2) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* **images:** lowercased GHCR image references ([eddf329](https://github.com/bauer-group/XPD-SonarQube/commit/eddf3292b1f629ca44f2f31913a305357955e500))
+
 ## [1.2.1](https://github.com/bauer-group/XPD-SonarQube/compare/v1.2.0...v1.2.1) (2026-06-17)
 
 ### 🐛 Bug Fixes
