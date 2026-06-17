@@ -80,7 +80,9 @@ jobs:
             exit 1
           fi
           echo "Resolved: SonarQube=${sq}  (latest plugin ${plugin})"
-          echo "build-args={\"SONARQUBE_VERSION\":\"${sq}\"}" >> "$GITHUB_OUTPUT"
+          # docker/build-push-action expects newline-separated KEY=VALUE pairs,
+          # NOT JSON — one arg here.
+          echo "build-args=SONARQUBE_VERSION=${sq}" >> "$GITHUB_OUTPUT"
 
   # ============================================
   # Release Job (only on main branch push)
