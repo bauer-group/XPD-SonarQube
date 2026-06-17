@@ -1,3 +1,9 @@
+## [1.0.5](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.4...v1.0.5) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* **ci:** hardened the release pipeline (no PR comments, serialized runs) ([b8ea390](https://github.com/bauer-group/XPD-SonarQube/commit/b8ea39072ee5731ad8dde4fab1adf27862842b93))
+
 ## [1.0.4](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.3...v1.0.4) (2026-06-17)
 
 ### 🐛 Bug Fixes
