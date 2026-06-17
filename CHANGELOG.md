@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.2...v1.0.3) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* aligned database to PostgreSQL 18 and fixed the pg18 volume path ([5c610c8](https://github.com/bauer-group/XPD-SonarQube/commit/5c610c813dea5d44e9cdcdfe4e75701f637d4841))
+* **ci:** updated validate-services to the renamed postgres service ([4b4947b](https://github.com/bauer-group/XPD-SonarQube/commit/4b4947bba85a16c954f773d1205fb41829c100ae))
+
 ## [1.0.2](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.1...v1.0.2) (2026-06-17)
 
 ### 🐛 Bug Fixes
