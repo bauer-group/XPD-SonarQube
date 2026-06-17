@@ -80,8 +80,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: r
         shell: bash
+        env:
+          # Pass context values through the environment — never interpolate
+          # ${{ github.* }} into the script body (GitHub Actions script injection).
+          REF: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
+          # Defense-in-depth: refuse an unexpected ref name before using it.
+          case "$REF" in
+            *[!A-Za-z0-9._/-]*) echo "::error::unexpected ref name: $REF"; exit 1 ;;
+          esac
           plugin="$(curl -fsSL https://api.github.com/repos/mc1arke/sonarqube-community-branch-plugin/releases/latest | jq -r '.tag_name')"
           minor="$(printf '%s' "$plugin" | cut -d. -f1-2)"
           sq="$(curl -fsSL "https://hub.docker.com/v2/repositories/library/sonarqube/tags?page_size=100&name=${minor}." \
@@ -107,7 +116,7 @@ jobs:
           # Keeps the Dockerfile the single source of truth: published == file.
           # Skipped on PRs. GITHUB_TOKEN pushes do NOT re-trigger workflows, so
           # this never loops; the rebase-retry guards against a concurrent push.
-          if [ "${{ github.event_name }}" = "pull_request" ]; then exit 0; fi
+          if [ "$EVENT_NAME" = "pull_request" ]; then exit 0; fi
           df="src/sonarqube/Dockerfile"
           sed -i -E "s|^(ARG SONARQUBE_VERSION=).*|\1${sq}|" "$df"
           sed -i -E "s|^(ARG BRANCH_PLUGIN_VERSION=).*|\1${plugin}|" "$df"
@@ -122,7 +131,7 @@ jobs:
           for attempt in 1 2 3; do
             if git push; then echo "pushed"; break; fi
             echo "push rejected — rebasing (attempt ${attempt})…"
-            git pull --rebase --autostash origin "${{ github.ref_name }}"
+            git pull --rebase --autostash origin "$REF"
             sleep 3
           done
 
