@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.0...v1.0.1) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* floated all image tags and auto-resolved the branch plugin ([b2a7a3b](https://github.com/bauer-group/XPD-SonarQube/commit/b2a7a3b0edbd8d2af6693807e735e7ec78771452))
+
 ## 1.0.0 (2026-06-17)
 
 ### 🚀 Features
