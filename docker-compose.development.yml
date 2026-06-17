@@ -1,0 +1,210 @@
+# =============================================================================
+# SonarQube — Local Development Stack (direct ports, local image build)
+# =============================================================================
+# Usage:  docker compose -f docker-compose.development.yml up -d --build
+#
+# Differences from the production (traefik) variant:
+#   - Builds the wrapper image locally from ./src (no GHCR pull needed) so you
+#     can test the Dockerfile + branch plugin before publishing.
+#   - Publishes SonarQube on http://localhost:${SONARQUBE_PORT} directly.
+#   - No reverse proxy / TLS.
+#
+# The privileged `sonarqube-init` service is still required: the embedded
+# Elasticsearch needs vm.max_map_count>=524288 inside the Docker VM too
+# (Docker Desktop / WSL2 / Linux host alike).
+# =============================================================================
+
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "50m"
+      max-file: "3"
+
+
+services:
+
+  sonarqube-init:
+    image: ${SONARQUBE_INIT_IMAGE:-busybox}:${SONARQUBE_INIT_VERSION:-1.37}
+    container_name: ${STACK_NAME:-sonarqube}_INIT
+    restart: "no"
+    privileged: true
+    command: sh -c "sysctl -w vm.max_map_count=524288 && sysctl -w fs.file-max=131072"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "1"
+    network_mode: none
+
+
+  db:
+    image: ${POSTGRES_IMAGE:-postgres}:${POSTGRES_VERSION:-16-alpine}
+    container_name: ${STACK_NAME:-sonarqube}_DB
+    hostname: db
+    restart: unless-stopped
+    <<: *logging
+    command: >
+      -c max_connections=${PG_MAX_CONNECTIONS:-100}
+      -c shared_buffers=${PG_SHARED_BUFFERS:-512MB}
+      -c work_mem=${PG_WORK_MEM:-8MB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-1536MB}
+      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-128MB}
+      -c max_wal_size=${PG_MAX_WAL_SIZE:-1GB}
+      -c min_wal_size=${PG_MIN_WAL_SIZE:-256MB}
+      -c random_page_cost=${PG_RANDOM_PAGE_COST:-1.1}
+      -c seq_page_cost=1.0
+      -c effective_io_concurrency=${PG_EFFECTIVE_IO_CONCURRENCY:-200}
+      -c max_parallel_workers_per_gather=2
+      -c max_parallel_workers=4
+      -c max_parallel_maintenance_workers=2
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+    environment:
+      TZ: ${TIME_ZONE:-Etc/UTC}
+      PGTZ: ${TIME_ZONE:-Etc/UTC}
+      POSTGRES_USER: ${POSTGRES_USER:-sonar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-sonar}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sonar} -d ${POSTGRES_DB:-sonar}"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      local:
+
+
+  sonarqube:
+    build:
+      context: ./src/sonarqube
+      args:
+        SONARQUBE_VERSION: ${SONARQUBE_BASE_VERSION:-26.5.0.122743-community}
+        BRANCH_PLUGIN_VERSION: ${BRANCH_PLUGIN_VERSION:-26.5.0}
+    image: ${SONARQUBE_IMAGE:-ghcr.io/bauer-group/XPD-SonarQube/sonarqube}:${SONARQUBE_VERSION:-latest}
+    container_name: ${STACK_NAME:-sonarqube}_APP
+    hostname: sonarqube
+    restart: unless-stopped
+    <<: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+      sonarqube-init:
+        condition: service_completed_successfully
+    environment:
+      TZ: ${TIME_ZONE:-Etc/UTC}
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-sonar}
+      SONAR_JDBC_USERNAME: ${POSTGRES_USER:-sonar}
+      SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SONAR_CORE_SERVERBASEURL: ${SONARQUBE_SERVER_BASE_URL:-http://localhost:${SONARQUBE_PORT:-9000}}
+      SONAR_WEB_JAVAOPTS: ${SONAR_WEB_JAVAOPTS:--Xmx512m -Xms128m}
+      SONAR_CE_JAVAOPTS: ${SONAR_CE_JAVAOPTS:--Xmx512m -Xms128m}
+      SONAR_SEARCH_JAVAOPTS: ${SONAR_SEARCH_JAVAOPTS:--Xmx512m -Xms512m -XX:MaxDirectMemorySize=256m}
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
+      nproc:
+        soft: 8192
+        hard: 8192
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-logs:/opt/sonarqube/logs
+    ports:
+      - "${SONARQUBE_PORT:-9000}:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status 2>/dev/null | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 6
+      start_period: 120s
+    networks:
+      local:
+
+
+  sonarqube-backup:
+    build:
+      context: ./src/sonarqube-backup
+    image: ${SONARQUBE_BACKUP_IMAGE:-ghcr.io/bauer-group/XPD-SonarQube/sonarqube-backup}:${SONARQUBE_BACKUP_VERSION:-latest}
+    container_name: ${STACK_NAME:-sonarqube}_BACKUP
+    profiles: ["backup"]
+    restart: unless-stopped
+    <<: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      TZ: ${TIME_ZONE:-Etc/UTC}
+      INSTANCE_NAME: ${SONARQUBE_BACKUP_INSTANCE_NAME:-${STACK_NAME:-sonarqube}}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-sonar}
+      DB_USER: ${POSTGRES_USER:-sonar}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      DB_SSLMODE: disable
+      DUMP_FORMAT: ${SONARQUBE_BACKUP_DUMP_FORMAT:-custom}
+      DUMP_TIMEOUT_SECONDS: ${SONARQUBE_BACKUP_DUMP_TIMEOUT_SECONDS:-1800}
+      RETENTION_COUNT: ${SONARQUBE_BACKUP_RETENTION_COUNT:-14}
+      KEEP_LOCAL_ARCHIVE: ${SONARQUBE_BACKUP_KEEP_LOCAL_ARCHIVE:-true}
+      BACKUP_DIR: /data
+      SCHEDULE_ENABLED: ${SONARQUBE_BACKUP_SCHEDULE_ENABLED:-true}
+      SCHEDULE_MODE: ${SONARQUBE_BACKUP_SCHEDULE_MODE:-cron}
+      SCHEDULE_CRON: ${SONARQUBE_BACKUP_SCHEDULE_CRON:-15 3 * * *}
+      SCHEDULE_INTERVAL_HOURS: ${SONARQUBE_BACKUP_SCHEDULE_INTERVAL_HOURS:-24}
+      RUN_ON_STARTUP: ${SONARQUBE_BACKUP_ON_STARTUP:-false}
+      S3_ENDPOINT: ${SONARQUBE_BACKUP_S3_ENDPOINT:-}
+      S3_BUCKET: ${SONARQUBE_BACKUP_S3_BUCKET:-}
+      S3_ACCESS_KEY: ${SONARQUBE_BACKUP_S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${SONARQUBE_BACKUP_S3_SECRET_KEY:-}
+      S3_REGION: ${SONARQUBE_BACKUP_S3_REGION:-eu-central-1}
+      S3_PREFIX: ${SONARQUBE_BACKUP_S3_PREFIX:-sonarqube/}
+      S3_MAX_WORKERS: ${SONARQUBE_BACKUP_S3_MAX_WORKERS:-4}
+      ALERT_ENABLED: ${SONARQUBE_BACKUP_ALERT_ENABLED:-false}
+      ALERT_LEVEL: ${SONARQUBE_BACKUP_ALERT_LEVEL:-warnings}
+      ALERT_CHANNELS: ${SONARQUBE_BACKUP_ALERT_CHANNELS:-}
+      ALERT_EMAIL: ${SONARQUBE_BACKUP_ALERT_EMAIL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-starttls}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM_EMAIL:-}
+      WEBHOOK_URL: ${SONARQUBE_BACKUP_WEBHOOK_URL:-}
+      WEBHOOK_SECRET: ${SONARQUBE_BACKUP_WEBHOOK_SECRET:-}
+      TEAMS_WEBHOOK_URL: ${SONARQUBE_BACKUP_TEAMS_WEBHOOK:-}
+      LOG_LEVEL: ${SONARQUBE_BACKUP_LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${SONARQUBE_BACKUP_LOG_FORMAT:-console}
+    volumes:
+      - sonarqube-backup-data:/data
+    networks:
+      local:
+
+
+volumes:
+  postgres-data:
+    driver: local
+    name: ${STACK_NAME:-sonarqube}-postgres
+  sonarqube-data:
+    driver: local
+    name: ${STACK_NAME:-sonarqube}-data
+  sonarqube-logs:
+    driver: local
+    name: ${STACK_NAME:-sonarqube}-logs
+  sonarqube-backup-data:
+    driver: local
+    name: ${STACK_NAME:-sonarqube}-backup
+
+
+networks:
+  local:
+    driver: bridge
+    name: ${STACK_NAME:-sonarqube}
+    enable_ipv6: true

@@ -1,0 +1,38 @@
+# Keep the Docker build context minimal — only src/<image>/ contents are ever
+# used as a build context, but this guards against accidental large/secret files
+# being pulled in when building from the repo root.
+
+# Secrets & environment
+.env
+.env.*
+!.env.example
+
+# Git & CI
+.git
+.github
+.gitignore
+.gitattributes
+
+# Docs & compose (never needed inside an image)
+docs/
+*.md
+docker-compose*.yml
+
+# IDE / OS
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Python build artefacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/

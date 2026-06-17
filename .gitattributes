@@ -1,0 +1,19 @@
+# Normalise all text files to LF in the repo and on checkout — even on Windows.
+# Critical for a container repo: shell snippets, Python and entrypoints must
+# carry LF line endings, or they break when copied into Linux images.
+* text=auto eol=lf
+
+# Explicit safety net for the executable/script types.
+*.py    text eol=lf
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+Dockerfile text eol=lf
+
+# Binary types (never normalise).
+*.png binary
+*.jpg binary
+*.gz  binary
+*.jar binary

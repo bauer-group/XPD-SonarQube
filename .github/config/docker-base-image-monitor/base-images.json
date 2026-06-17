@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/bauer-group/automation-templates/main/.github/config/docker-base-image-monitor/docker-base-images.schema.json",
+  "_description": "SonarQube stack — base images of the wrapper/backup builds plus the images the compose files pull. A digest move triggers a rebuild/release.",
+  "images": [
+    {
+      "name": "sonarqube",
+      "image": "sonarqube",
+      "tag": "26.5.0.122743-community",
+      "variable": "SONARQUBE_COMMUNITY_DIGEST",
+      "description": "SonarQube Community Build — base of the wrapper image (pinned; bump with the branch plugin, see docs/upgrade.md)"
+    },
+    {
+      "name": "python-alpine",
+      "image": "python",
+      "tag": "3.13-alpine",
+      "variable": "PYTHON_ALPINE_DIGEST",
+      "description": "Base image for the sonarqube-backup container (src/sonarqube-backup/Dockerfile)"
+    },
+    {
+      "name": "postgres",
+      "image": "postgres",
+      "tag": "16-alpine",
+      "variable": "POSTGRES_ALPINE_DIGEST",
+      "description": "PostgreSQL database (pulled by the compose files)"
+    },
+    {
+      "name": "busybox",
+      "image": "busybox",
+      "tag": "1.37",
+      "variable": "BUSYBOX_DIGEST",
+      "description": "Kernel-init sidecar that sets vm.max_map_count (pulled by the compose files)"
+    }
+  ],
+  "settings": {
+    "commit-prefix": "chore(deps)",
+    "auto-create-variables": true
+  }
+}
