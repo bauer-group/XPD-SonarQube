@@ -3,7 +3,7 @@
 Scheduled backup of the SonarQube **PostgreSQL database** — the only stateful
 component worth backing up (Elasticsearch indexes and plugins are rebuildable).
 
-Published as `ghcr.io/bauer-group/XPD-SonarQube/sonarqube-backup`.
+Published as `ghcr.io/bauer-group/xpd-sonarqube/sonarqube-backup`.
 
 ## What it does
 

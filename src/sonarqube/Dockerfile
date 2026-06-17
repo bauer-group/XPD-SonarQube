@@ -4,7 +4,7 @@
 # =============================================================================
 # Sovereign re-publish of the upstream SonarQube Community Build with the
 # Community Branch Plugin baked in. Published as
-# ghcr.io/bauer-group/XPD-SonarQube/sonarqube.
+# ghcr.io/bauer-group/xpd-sonarqube/sonarqube.
 #
 # Versions are PINNED here as the source of truth (visible + reproducible):
 #   SONARQUBE_VERSION      — base image tag (…-community)

@@ -129,7 +129,7 @@ services:
 
   # ── SonarQube (wrapper image: Community Build + Branch Plugin) ──────────────
   sonarqube:
-    image: ${SONARQUBE_IMAGE:-ghcr.io/bauer-group/XPD-SonarQube/sonarqube}:${SONARQUBE_VERSION:-latest}
+    image: ${SONARQUBE_IMAGE:-ghcr.io/bauer-group/xpd-sonarqube/sonarqube}:${SONARQUBE_VERSION:-latest}
     container_name: ${STACK_NAME:-sonarqube}_APP
     hostname: sonarqube
     restart: unless-stopped
@@ -148,9 +148,9 @@ services:
       # Public base URL → correct links in notifications & PR decoration
       SONAR_CORE_SERVERBASEURL: ${SONARQUBE_SERVER_BASE_URL:-https://${SONARQUBE_HOSTNAME}}
       # JVM heap (the branch-plugin -javaagent opts are baked into the image)
-      SONAR_WEB_JAVAOPTS: ${SONAR_WEB_JAVAOPTS:--Xmx512m -Xms128m}
-      SONAR_CE_JAVAOPTS: ${SONAR_CE_JAVAOPTS:--Xmx512m -Xms128m}
-      SONAR_SEARCH_JAVAOPTS: ${SONAR_SEARCH_JAVAOPTS:--Xmx512m -Xms512m -XX:MaxDirectMemorySize=256m}
+      SONAR_WEB_JAVAOPTS: ${SONAR_WEB_JAVAOPTS:--Xmx512m -Xms128m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt/sonarqube/data}
+      SONAR_CE_JAVAOPTS: ${SONAR_CE_JAVAOPTS:--Xmx512m -Xms128m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt/sonarqube/data}
+      SONAR_SEARCH_JAVAOPTS: ${SONAR_SEARCH_JAVAOPTS:--Xmx512m -Xms512m -XX:MaxDirectMemorySize=256m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt/sonarqube/data}
     ulimits:
       nofile:
         soft: 131072
@@ -204,7 +204,7 @@ services:
   # On-demand:     docker compose -f docker-compose.traefik.yml --profile backup run --rm sonarqube-backup --now
   # Dumps the SonarQube PostgreSQL database. Internal-only — no Traefik exposure.
   sonarqube-backup:
-    image: ${SONARQUBE_BACKUP_IMAGE:-ghcr.io/bauer-group/XPD-SonarQube/sonarqube-backup}:${SONARQUBE_BACKUP_VERSION:-latest}
+    image: ${SONARQUBE_BACKUP_IMAGE:-ghcr.io/bauer-group/xpd-sonarqube/sonarqube-backup}:${SONARQUBE_BACKUP_VERSION:-latest}
     container_name: ${STACK_NAME:-sonarqube}_BACKUP
     profiles: ["backup"]
     restart: unless-stopped

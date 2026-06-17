@@ -5,7 +5,7 @@ Community Build image with the
 [Community Branch Plugin](https://github.com/mc1arke/sonarqube-community-branch-plugin)
 baked into `/opt/sonarqube/extensions/plugins/`.
 
-Published as `ghcr.io/bauer-group/XPD-SonarQube/sonarqube`.
+Published as `ghcr.io/bauer-group/xpd-sonarqube/sonarqube`.
 
 ## Why a wrapper image?
 

@@ -167,7 +167,7 @@ jobs:
     with:
       deploy-environment: 'production'
       publish-to: 'ghcr'
-      ghcr-image-name: 'bauer-group/XPD-SonarQube/sonarqube'
+      ghcr-image-name: 'bauer-group/xpd-sonarqube/sonarqube'
 
       release-version: ${{ needs.release.outputs.version }}
       image-tags: 'stable'
@@ -199,7 +199,7 @@ jobs:
     uses: bauer-group/automation-templates/.github/workflows/docker-build.yml@main
     with:
       publish-to: 'ghcr'
-      ghcr-image-name: 'bauer-group/XPD-SonarQube/sonarqube'
+      ghcr-image-name: 'bauer-group/xpd-sonarqube/sonarqube'
 
       auto-tags: true
       dockerfile-path: './src/sonarqube/Dockerfile'
@@ -225,7 +225,7 @@ jobs:
     with:
       deploy-environment: 'production'
       publish-to: 'ghcr'
-      ghcr-image-name: 'bauer-group/XPD-SonarQube/sonarqube-backup'
+      ghcr-image-name: 'bauer-group/xpd-sonarqube/sonarqube-backup'
 
       release-version: ${{ needs.release.outputs.version }}
       image-tags: 'stable'
@@ -256,7 +256,7 @@ jobs:
     uses: bauer-group/automation-templates/.github/workflows/docker-build.yml@main
     with:
       publish-to: 'ghcr'
-      ghcr-image-name: 'bauer-group/XPD-SonarQube/sonarqube-backup'
+      ghcr-image-name: 'bauer-group/xpd-sonarqube/sonarqube-backup'
 
       auto-tags: true
       dockerfile-path: './src/sonarqube-backup/Dockerfile'

@@ -5,7 +5,7 @@
 # integrity manifest, optional off-site S3 upload, count-based retention and
 # multi-channel alerting (e-mail / webhook / Teams).
 #
-# Published as ghcr.io/bauer-group/XPD-SonarQube/sonarqube-backup.
+# Published as ghcr.io/bauer-group/xpd-sonarqube/sonarqube-backup.
 # =============================================================================
 
 FROM python:3.14-alpine
