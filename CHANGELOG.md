@@ -1,3 +1,13 @@
+## [1.1.0](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.7...v1.1.0) (2026-06-17)
+
+### 🚀 Features
+
+* **sso:** prepared Entra ID (SAML) and Zitadel (OIDC) single sign-on ([d619766](https://github.com/bauer-group/XPD-SonarQube/commit/d619766ae6dd0424f1a246f2dc62062ce129f854))
+
+### 🐛 Bug Fixes
+
+* **ci:** hardened resolve-versions against script injection ([fe313f5](https://github.com/bauer-group/XPD-SonarQube/commit/fe313f5cd480008d480444f9ed308d723ac2a8c5))
+
 ## [1.0.7](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.6...v1.0.7) (2026-06-17)
 
 ### 🐛 Bug Fixes
