@@ -10,41 +10,37 @@ Published as `ghcr.io/bauer-group/XPD-SonarQube/sonarqube`.
 ## Why a wrapper image?
 
 * **Reproducible branch analysis.** The branch plugin is version-locked to
-  SonarQube. Baking it into the image layer means an image bump upgrades the
-  plugin atomically — a stale `extensions/` volume can never shadow it.
+  SonarQube. Baking it into the image layer means a rebuild upgrades the plugin
+  atomically — a stale `extensions/` volume can never shadow it.
 * **Sovereign re-publish.** The stack keeps working from our own registry even
-  if upstream tags move or disappear.
+  if upstream tags move.
 
-## Version pinning (bump as a pair)
+## Floating — no version is pinned here
 
-| Build arg               | Default                     | Source                                             |
-| ----------------------- | --------------------------- | -------------------------------------------------- |
-| `SONARQUBE_VERSION`     | `26.5.0.122743-community`   | Docker Hub `library/sonarqube`                     |
-| `BRANCH_PLUGIN_VERSION` | `26.5.0`                    | `mc1arke/sonarqube-community-branch-plugin` releases |
-| `BRANCH_PLUGIN_SHA256`  | _(empty — skip check)_      | optional supply-chain verification of the JAR      |
+The only build arg is **`SONARQUBE_VERSION`** (default `community`). CI overrides
+it with the newest **plugin-compatible** `…-community` tag via the
+`resolve-versions` job, so the published image always tracks the freshest working
+release.
 
-The plugin `MAJOR.MINOR` **must equal** the SonarQube `MAJOR.MINOR`. Never pin
-`SONARQUBE_VERSION` to the floating `community`/`latest` tag — it races ahead of
-the plugin and a mismatched plugin stops SonarQube from starting. See
-[`docs/upgrade.md`](../../docs/upgrade.md) and
-[`docs/branch-analysis.md`](../../docs/branch-analysis.md).
+The plugin is **not** a build arg: the Dockerfile reads the base image's
+`$SONAR_VERSION` at build time, derives the matching plugin tag
+(`<MAJOR>.<MINOR>.0`), downloads it under a version-less filename, and the
+`-javaagent` `ENV` references that fixed name. Nothing to bump by hand — see
+[`docs/branch-analysis.md`](../../docs/branch-analysis.md) and
+[`docs/upgrade.md`](../../docs/upgrade.md).
 
 ## Local build & test
 
 ```bash
+# A bare build floats on `community`; pass a plugin-compatible tag to be safe
+# (mirrors what CI resolves), since `community` can run ahead of the plugin:
 docker build \
   --build-arg SONARQUBE_VERSION=26.5.0.122743-community \
-  --build-arg BRANCH_PLUGIN_VERSION=26.5.0 \
   -t sonarqube-bauer:test ./src/sonarqube
 
-# The plugin must be present in the image:
-docker run --rm sonarqube-bauer:test \
-  ls -la /opt/sonarqube/extensions/plugins/
+docker run --rm --entrypoint sh sonarqube-bauer:test \
+  -c 'ls -l /opt/sonarqube/extensions/plugins/ && echo "$SONAR_WEB_JAVAADDITIONALOPTS"'
 ```
-
-The `-javaagent` options that activate the plugin live in the compose files
-(`SONAR_WEB_JAVAADDITIONALOPTS` / `SONAR_CE_JAVAADDITIONALOPTS`), kept visible
-and coupled to the exact JAR filename — not hidden in this image.
 
 ## License
 

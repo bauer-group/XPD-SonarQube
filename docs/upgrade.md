@@ -1,51 +1,53 @@
 # Upgrading
 
-## The golden rule: bump SonarQube and the branch plugin as a pair
+This stack is built to **stay current automatically** — there are no version
+numbers to bump by hand.
 
-The Community Branch Plugin is version-locked: plugin `MAJOR.MINOR` must equal
-SonarQube `MAJOR.MINOR`. A mismatch stops SonarQube from starting.
+## How auto-updating works
 
-1. Find a matching pair:
-   - SonarQube Community Build tags: <https://hub.docker.com/_/sonarqube> (look for `…-community`)
-   - Plugin releases: <https://github.com/mc1arke/sonarqube-community-branch-plugin/releases>
-   - The plugin usually trails the newest SonarQube release by a few weeks — pick
-     the newest SonarQube `…-community` tag that has a matching plugin release.
-2. Update the pinned defaults in **`src/sonarqube/Dockerfile`**:
+| Mechanism | What it keeps current |
+| --- | --- |
+| **CI resolver** (`resolve-versions` in `docker-release.yml`) | On every build, takes the latest Community Branch Plugin release and rebuilds the wrapper on the newest matching `…-community` SonarQube tag. Always the freshest WORKING pair. |
+| **Base-image monitor** (`check-base-images.yml`, daily) | Watches the floating tags (`sonarqube:community`, `python:3.14-alpine`, `postgres:16-alpine`, `busybox:stable`) for digest drift and triggers a rebuild/release when upstream moves. |
+| **Dependabot** (weekly) | Bumps the floating base tags inside the Dockerfiles and the Python deps; the `docker-maintenance` workflow auto-merges Dockerfile bumps. |
+| **`docker compose pull`** | Brings the host's pulled images (postgres, busybox, the wrapper images) up to the latest digest of their floating tags. |
 
-   ```dockerfile
-   ARG SONARQUBE_VERSION=<new>-community
-   ARG BRANCH_PLUGIN_VERSION=<new>
-   ```
+So a routine "upgrade" is just: let CI/Dependabot do their thing, then on the
+host `docker compose -f docker-compose.traefik.yml pull && up -d`.
 
-   and mirror them in **`.env.example`** (`SONARQUBE_BASE_VERSION`,
-   `BRANCH_PLUGIN_VERSION`) and **`.github/config/docker-base-image-monitor/base-images.json`**.
-3. (Optional, recommended) set `BRANCH_PLUGIN_SHA256` to verify the JAR download.
-4. Commit — CI rebuilds and republishes `ghcr.io/bauer-group/XPD-SonarQube/sonarqube`.
+## Why the branch plugin needs no manual pin
 
-## SonarQube upgrade procedure
+The Community Branch Plugin is version-locked to SonarQube, and SonarQube's
+`community` tag often runs slightly ahead of the plugin's releases. Instead of
+pinning, the build **floats on the plugin**: the CI resolver picks the newest
+SonarQube version that has a matching plugin, and the Dockerfile derives the
+plugin from the base image's `$SONAR_VERSION` (see
+[branch-analysis.md](branch-analysis.md)). During the short window after a brand
+new SonarQube release but before the matching plugin ships, the resolver simply
+stays on the previous (working) version — no breakage, no action needed.
 
-SonarQube applies database migrations on startup. For a safe upgrade:
+## The two genuinely manual steps
+
+Some upgrades cannot be fully automated because they touch persistent data:
+
+### SonarQube database migrations
+
+SonarQube applies DB migrations on startup. When a new build includes a
+migration:
 
 1. **Back up the database first** (`--now`, then `verify`) — see [backup.md](backup.md).
-2. Pull/deploy the new wrapper image and recreate the `sonarqube` service.
-3. Watch the logs; if a DB migration is required, SonarQube serves a maintenance
-   page — open `https://${SONARQUBE_HOSTNAME}/setup` and trigger the upgrade.
-4. Do **not** skip across more than one LTA/major at a time — follow SonarQube's
-   official upgrade path if jumping several majors.
+2. `docker compose -f docker-compose.traefik.yml pull && up -d`.
+3. If a migration is required, SonarQube shows a maintenance page — open
+   `https://${SONARQUBE_HOSTNAME}/setup` and trigger the upgrade.
+4. Do not skip more than one LTA/major at a time; follow SonarQube's official
+   upgrade path for large jumps.
 
 > Only one SonarQube instance may use a database schema at a time. Never run two
-> instances (e.g. old + new) against the same database.
+> instances against the same database.
 
-## PostgreSQL upgrade
+### PostgreSQL major upgrades
 
-`POSTGRES_VERSION` (and the backup image's `PG_MAJOR` build arg) should stay
-within SonarQube's supported PostgreSQL range. A PostgreSQL **major** upgrade is
-not an in-place volume swap — dump (with the backup sidecar), recreate the `db`
-volume on the new major, and restore.
-
-## Base image digest drift
-
-`check-base-images.yml` runs daily and, when an upstream base image digest moves
-on a watched tag (`python:*-alpine`, `postgres:16-alpine`, …), triggers
-`docker-release.yml` with `force-release` to rebuild and republish — no manual
-action needed.
+`POSTGRES_VERSION` is intentionally major-pinned (`16-alpine`) so it patch-floats
+but never auto-jumps majors — a major PostgreSQL upgrade is not an in-place
+volume swap. To move majors: back up with the sidecar, recreate the `db` volume
+on the new major, restore. Keep the backup image's `PG_MAJOR` build arg in step.

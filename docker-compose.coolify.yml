@@ -30,7 +30,7 @@ x-logging: &logging
 services:
 
   sonarqube-init:
-    image: ${SONARQUBE_INIT_IMAGE:-busybox}:${SONARQUBE_INIT_VERSION:-1.37}
+    image: ${SONARQUBE_INIT_IMAGE:-busybox}:${SONARQUBE_INIT_VERSION:-stable}
     container_name: ${STACK_NAME:-sonarqube}_INIT
     restart: "no"
     privileged: true

@@ -26,7 +26,7 @@ x-logging: &logging
 services:
 
   sonarqube-init:
-    image: ${SONARQUBE_INIT_IMAGE:-busybox}:${SONARQUBE_INIT_VERSION:-1.37}
+    image: ${SONARQUBE_INIT_IMAGE:-busybox}:${SONARQUBE_INIT_VERSION:-stable}
     container_name: ${STACK_NAME:-sonarqube}_INIT
     restart: "no"
     privileged: true
@@ -83,12 +83,10 @@ services:
       local:
 
 
+  # Pulls the published wrapper image (CI auto-resolves the newest plugin-
+  # compatible SonarQube). To hack on the Dockerfile locally, build it directly:
+  #   docker build ./src/sonarqube --build-arg SONARQUBE_VERSION=<full-community-tag>
   sonarqube:
-    build:
-      context: ./src/sonarqube
-      args:
-        SONARQUBE_VERSION: ${SONARQUBE_BASE_VERSION:-26.5.0.122743-community}
-        BRANCH_PLUGIN_VERSION: ${BRANCH_PLUGIN_VERSION:-26.5.0}
     image: ${SONARQUBE_IMAGE:-ghcr.io/bauer-group/XPD-SonarQube/sonarqube}:${SONARQUBE_VERSION:-latest}
     container_name: ${STACK_NAME:-sonarqube}_APP
     hostname: sonarqube

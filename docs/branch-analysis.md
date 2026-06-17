@@ -5,31 +5,39 @@ bundles the third-party
 [Community Branch Plugin](https://github.com/mc1arke/sonarqube-community-branch-plugin)
 to add branch and pull-request analysis.
 
-## How it is wired
+## How it is wired (auto-resolved, no manual pin)
 
 - The plugin JAR is **baked into the wrapper image** at
   `/opt/sonarqube/extensions/plugins/` (see `src/sonarqube/Dockerfile`), not
   installed via the Marketplace.
-- The plugin runs as a `-javaagent` in **both** JVMs. The wrapper image sets
-  these as image-level `ENV`, so they always match the bundled JAR:
+- The Dockerfile **resolves the plugin at build time** from the base image's own
+  `$SONAR_VERSION` (plugin tag = `<MAJOR>.<MINOR>.0`) and stores it under a
+  version-less filename. So the `-javaagent` options are static image-level `ENV`
+  and never drift from the bundled JAR:
+
+  ```text
+  SONAR_WEB_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin.jar=web
+  SONAR_CE_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin.jar=ce
   ```
-  SONAR_WEB_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-<ver>.jar=web
-  SONAR_CE_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-<ver>.jar=ce
-  ```
+
 - Because the plugin is in the image layer, `/opt/sonarqube/extensions` is
   **deliberately not a named volume** — a volume would shadow the plugin after an
   image upgrade and silently pin an old version.
 
-## Version locking ⚠
+## Version locking — handled automatically ⚙
 
-The plugin `MAJOR.MINOR` **must equal** the SonarQube `MAJOR.MINOR`
-(e.g. plugin `26.5.0` ↔ SonarQube `26.5.x`). A mismatched plugin refuses to load
-and **SonarQube fails to start**.
+The plugin `MAJOR.MINOR` must equal the SonarQube `MAJOR.MINOR`; a mismatched
+plugin refuses to load and SonarQube fails to start. The floating `community`
+tag often runs ahead of the plugin, so this stack **floats on the plugin** and
+matches SonarQube to it — there is nothing to pin by hand:
 
-- Pinned pair in this repo: SonarQube `26.5.0.122743-community` ↔ plugin `26.5.0`.
-- **Never** point `SONARQUBE_BASE_VERSION` at the floating `community`/`latest`
-  tag — it races ahead of the plugin's releases.
-- Bump both together — see [upgrade.md](upgrade.md).
+- The CI `resolve-versions` job takes the **latest branch-plugin release**, then
+  picks the newest SonarQube `<MAJOR.MINOR>.*-community` tag and feeds it to the
+  build as `--build-arg SONARQUBE_VERSION=…`.
+- The base-image monitor watches the floating `sonarqube:community` tag and
+  triggers a rebuild (re-resolve) on upstream drift.
+- During the short window after a brand-new SonarQube release but before the
+  matching plugin ships, the resolver stays on the previous working version.
 
 This plugin is **not supported by SonarSource**; using it is a deliberate
 internal decision.
@@ -48,7 +56,7 @@ internal decision.
 
 ## Disabling branch analysis
 
-If you ever want the plain Community Build without the plugin, build the wrapper
-with the plugin step removed (or override `SONAR_WEB_JAVAADDITIONALOPTS` /
-`SONAR_CE_JAVAADDITIONALOPTS` to empty in the compose `environment:`), and you
-may then pin `SONARQUBE_BASE_VERSION` to the floating `community` tag.
+If you ever want the plain Community Build without the plugin, override
+`SONAR_WEB_JAVAADDITIONALOPTS` / `SONAR_CE_JAVAADDITIONALOPTS` to empty in the
+compose `environment:` (the plugin JAR is then present but not activated), or
+point `SONARQUBE_IMAGE` at the upstream `sonarqube:community` image directly.

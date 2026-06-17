@@ -49,7 +49,7 @@ services:
   # the portable way to apply it. The value persists on the host after exit;
   # `sonarqube` waits for this to complete before starting.
   sonarqube-init:
-    image: ${SONARQUBE_INIT_IMAGE:-busybox}:${SONARQUBE_INIT_VERSION:-1.37}
+    image: ${SONARQUBE_INIT_IMAGE:-busybox}:${SONARQUBE_INIT_VERSION:-stable}
     container_name: ${STACK_NAME:-sonarqube}_INIT
     restart: "no"
     privileged: true

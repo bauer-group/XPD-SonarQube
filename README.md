@@ -23,7 +23,7 @@ images, `semantic-release`, Dependabot and daily base-image monitoring.
 
 ## Architecture
 
-```
+```text
   Browsers / Scanners / CI runners
             │
             ▼  HTTPS (Let's Encrypt)
@@ -63,9 +63,9 @@ docker compose -f docker-compose.traefik.yml up -d
 
 ## Repository layout
 
-```
+```text
 .
-├── docker-compose.development.yml   # local: direct ports, builds from ./src
+├── docker-compose.development.yml   # local: direct ports (pulls images)
 ├── docker-compose.traefik.yml       # production: EDGEPROXY + Let's Encrypt
 ├── docker-compose.coolify.yml       # production: Coolify dashboard
 ├── .env.example                     # full configuration contract
@@ -77,20 +77,26 @@ docker compose -f docker-compose.traefik.yml up -d
 └── .github/                         # CI/CD: release, docker build, dependabot, monitors
 ```
 
-## Editions & versions
+## Editions & versions (all floating — no manual pinning)
 
-| Component        | Image / tag                                           | Notes |
-| ---------------- | ----------------------------------------------------- | ----- |
-| SonarQube        | `sonarqube:26.5.0.122743-community`                   | Community Build, pinned |
-| Branch plugin    | `26.5.0`                                              | MAJOR.MINOR must equal SonarQube |
-| PostgreSQL       | `postgres:16-alpine`                                  | within SonarQube's supported range |
-| Wrapper image    | `ghcr.io/bauer-group/XPD-SonarQube/sonarqube`         | Community Build + plugin |
-| Backup image     | `ghcr.io/bauer-group/XPD-SonarQube/sonarqube-backup`  | scheduled `pg_dump` |
+Every tag floats so the stack auto-updates to current, patched software. CI
+rebuilds the wrapper images and the daily base-image monitor catches digest
+drift — there are no version numbers to maintain by hand.
+
+| Component      | Tag (floating)        | Updates via                     |
+| -------------- | --------------------- | ------------------------------- |
+| SonarQube base | `sonarqube:community` | CI resolver (plugin-compatible) |
+| Branch plugin  | derived from base     | Dockerfile (no pin)             |
+| PostgreSQL     | `postgres:16-alpine`  | patch-floating                  |
+| Backup base    | `python:3.14-alpine`  | patch-floating + Dependabot     |
+| Init sidecar   | `busybox:stable`      | floating                        |
+| Wrapper images | `sonarqube:latest`    | CI + base-image monitor         |
 
 The Community Build only analyses the main branch natively — the bundled
 **Community Branch Plugin** adds branch & PR analysis. It is a third-party
-plugin (not supported by SonarSource) and is **version-locked** to SonarQube.
-See [docs/branch-analysis.md](docs/branch-analysis.md) and
+plugin (not supported by SonarSource) and is version-locked to SonarQube;
+the build resolves the matching plugin automatically. See
+[docs/branch-analysis.md](docs/branch-analysis.md) and
 [docs/upgrade.md](docs/upgrade.md).
 
 ## Operations

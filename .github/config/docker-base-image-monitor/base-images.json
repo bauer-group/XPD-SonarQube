@@ -1,34 +1,34 @@
 {
   "$schema": "https://raw.githubusercontent.com/bauer-group/automation-templates/main/.github/config/docker-base-image-monitor/docker-base-images.schema.json",
-  "_description": "SonarQube stack — base images of the wrapper/backup builds plus the images the compose files pull. A digest move triggers a rebuild/release.",
+  "_description": "SonarQube stack — all entries use FLOATING tags so a digest move triggers an automatic rebuild/release, keeping the stack on current, patched software with no manual version maintenance.",
   "images": [
     {
       "name": "sonarqube",
       "image": "sonarqube",
-      "tag": "26.5.0.122743-community",
+      "tag": "community",
       "variable": "SONARQUBE_COMMUNITY_DIGEST",
-      "description": "SonarQube Community Build — base of the wrapper image (pinned; bump with the branch plugin, see docs/upgrade.md)"
+      "description": "SonarQube Community Build — floating base of the wrapper image. On drift, docker-release.yml re-resolves the newest plugin-compatible version (see the resolve-versions job)."
     },
     {
       "name": "python-alpine",
       "image": "python",
       "tag": "3.14-alpine",
       "variable": "PYTHON_ALPINE_DIGEST",
-      "description": "Base image for the sonarqube-backup container (src/sonarqube-backup/Dockerfile)"
+      "description": "Floating base of the sonarqube-backup image (minor-pinned, patch-floating). Dependabot bumps the minor; the monitor catches patch/digest drift."
     },
     {
       "name": "postgres",
       "image": "postgres",
       "tag": "16-alpine",
       "variable": "POSTGRES_ALPINE_DIGEST",
-      "description": "PostgreSQL database (pulled by the compose files)"
+      "description": "PostgreSQL database (pulled by compose). Major-pinned, patch-floating — major upgrades are intentional/manual (data migration)."
     },
     {
       "name": "busybox",
       "image": "busybox",
-      "tag": "1.37",
+      "tag": "stable",
       "variable": "BUSYBOX_DIGEST",
-      "description": "Kernel-init sidecar that sets vm.max_map_count (pulled by the compose files)"
+      "description": "Kernel-init sidecar that sets vm.max_map_count (pulled by compose). Floating stable tag."
     }
   ],
   "settings": {

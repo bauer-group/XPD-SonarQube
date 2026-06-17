@@ -49,6 +49,40 @@ jobs:
       severity: 'error'
 
   # ============================================
+  # Resolve the newest plugin-compatible SonarQube version
+  # ============================================
+  # The Community Branch Plugin is version-locked to SonarQube, and the floating
+  # `community` tag often runs ahead of the plugin's releases. So we float on the
+  # PLUGIN: take its latest release, then pick the newest matching SonarQube
+  # `<MAJOR.MINOR>.*-community` tag and pass it as a build-arg. This keeps the
+  # build green and always on the newest WORKING pair — no manual pinning.
+
+  resolve-versions:
+    name: 🧭 Resolve SonarQube + plugin pair
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      build-args: ${{ steps.r.outputs.build-args }}
+    steps:
+      - id: r
+        shell: bash
+        run: |
+          set -euo pipefail
+          plugin="$(curl -fsSL https://api.github.com/repos/mc1arke/sonarqube-community-branch-plugin/releases/latest | jq -r '.tag_name')"
+          minor="$(printf '%s' "$plugin" | cut -d. -f1-2)"
+          sq="$(curl -fsSL "https://hub.docker.com/v2/repositories/library/sonarqube/tags?page_size=100&name=${minor}." \
+                | jq -r '.results[].name' \
+                | grep -E "^${minor}\.[0-9.]+-community$" | sort -V | tail -1)"
+          if [ -z "$plugin" ] || [ -z "$sq" ]; then
+            echo "::error::could not resolve a SonarQube tag for plugin ${plugin:-<none>} (minor ${minor:-<none>})"
+            exit 1
+          fi
+          echo "Resolved: SonarQube=${sq}  (latest plugin ${plugin})"
+          echo "build-args={\"SONARQUBE_VERSION\":\"${sq}\"}" >> "$GITHUB_OUTPUT"
+
+  # ============================================
   # Release Job (only on main branch push)
   # ============================================
 
@@ -74,7 +108,7 @@ jobs:
 
   docker-build-sonarqube-release:
     name: 🐳 Build & Push sonarqube
-    needs: release
+    needs: [release, resolve-versions]
     if: needs.release.outputs.release-created == 'true'
     uses: bauer-group/automation-templates/.github/workflows/docker-build.yml@main
     with:
@@ -92,6 +126,7 @@ jobs:
       dockerfile-path: './src/sonarqube/Dockerfile'
       docker-context: './src/sonarqube'
       platforms: 'linux/amd64'
+      build-args: ${{ needs.resolve-versions.outputs.build-args }}
 
       push: true
 
@@ -103,7 +138,7 @@ jobs:
 
   docker-build-sonarqube-pr:
     name: 🔨 Validate sonarqube Build (PR)
-    needs: [validate-compose, validate-scripts]
+    needs: [validate-compose, validate-scripts, resolve-versions]
     if: |
       github.event_name == 'pull_request' &&
       needs.validate-compose.result == 'success' &&
@@ -117,6 +152,7 @@ jobs:
       dockerfile-path: './src/sonarqube/Dockerfile'
       docker-context: './src/sonarqube'
       platforms: 'linux/amd64'
+      build-args: ${{ needs.resolve-versions.outputs.build-args }}
 
       push: false
 
