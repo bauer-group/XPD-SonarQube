@@ -1,21 +1,18 @@
 # =============================================================================
-# Docker Maintenance — Auto-merge Dependabot PRs (sonarqube-* Dockerfiles)
+# Dependabot Maintenance — Auto-merge ALL Dependabot PRs
 # =============================================================================
-# When Dependabot opens a PR bumping a base image inside either:
-#   - src/sonarqube/Dockerfile          (sonarqube:<ver>-community)
-#   - src/sonarqube-backup/Dockerfile   (python:*-alpine)
-# this workflow auto-approves and merges it (after validation passes), which
-# then triggers docker-release.yml to build and push the updated image.
+# Auto-approves and squash-merges every Dependabot PR once its checks pass —
+# base-image bumps (Dockerfiles), Python deps (requirements*.txt), GitHub Action
+# versions and docker-compose image tags alike. Hands-off currency: dependency
+# PRs are never left sitting open. The reusable gates on required checks, so a
+# bump that breaks CI will not merge.
 # =============================================================================
 
-name: 🔧 Docker Maintenance
+name: 🔧 Dependabot Maintenance
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - 'src/sonarqube/Dockerfile'
-      - 'src/sonarqube-backup/Dockerfile'
 
 permissions:
   contents: write
