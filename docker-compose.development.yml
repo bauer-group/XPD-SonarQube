@@ -30,7 +30,25 @@ services:
     container_name: ${STACK_NAME:-sonarqube}_INIT
     restart: "no"
     privileged: true
-    command: sh -c "sysctl -w vm.max_map_count=524288 && sysctl -w fs.file-max=131072"
+    command:
+      - sh
+      - -c
+      - |
+        # Raise-only: never reduce a kernel value another workload may rely on.
+        # vm.max_map_count and fs.file-max are NOT namespaced -> global to the VM.
+        want_mmc=524288; want_fm=131072
+        cur_mmc=$$(cat /proc/sys/vm/max_map_count)
+        cur_fm=$$(cat /proc/sys/fs/file-max)
+        if [ "$$cur_mmc" -lt "$$want_mmc" ]; then
+          sysctl -w vm.max_map_count=$$want_mmc
+        else
+          echo "vm.max_map_count=$$cur_mmc already >= $$want_mmc, keeping"
+        fi
+        if [ "$$cur_fm" -lt "$$want_fm" ]; then
+          sysctl -w fs.file-max=$$want_fm
+        else
+          echo "fs.file-max=$$cur_fm already >= $$want_fm, keeping"
+        fi
     logging:
       driver: json-file
       options:
