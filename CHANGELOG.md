@@ -1,3 +1,9 @@
+## [1.0.7](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.6...v1.0.7) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* **ci:** made the Dockerfile the committed-back source of truth for versions ([63cea10](https://github.com/bauer-group/XPD-SonarQube/commit/63cea10744305cb88aa6adbe4c3791251e07acf8))
+
 ## [1.0.6](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.5...v1.0.6) (2026-06-17)
 
 ### 🐛 Bug Fixes
