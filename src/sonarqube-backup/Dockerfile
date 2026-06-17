@@ -8,7 +8,7 @@
 # Published as ghcr.io/bauer-group/XPD-SonarQube/sonarqube-backup.
 # =============================================================================
 
-FROM python:3.13-alpine
+FROM python:3.14-alpine
 
 # pg_dump / pg_restore / psql. The client MAJOR must be >= the PostgreSQL
 # server MAJOR — keep PG_MAJOR in step with POSTGRES_VERSION in .env.
