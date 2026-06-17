@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/bauer-group/XPD-SonarQube/compare/v1.1.0...v1.2.0) (2026-06-17)
+
+### 🚀 Features
+
+* **sso:** enabled the OIDC plugin by default (Zitadel-ready) ([72f8d04](https://github.com/bauer-group/XPD-SonarQube/commit/72f8d047b76a7a52d109f41113503d8d377cc1ed))
+
 ## [1.1.0](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.7...v1.1.0) (2026-06-17)
 
 ### 🚀 Features
