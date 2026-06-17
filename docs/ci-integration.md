@@ -125,10 +125,10 @@ Per the
    All of this lives in the SonarQube UI/database — **no env vars** (consistent
    with [authentication.md](authentication.md)).
 
-> The above is the SonarSource-documented permission set (it also covers
-> repository import and GitHub login). The bundled Community Branch Plugin posts
-> PR decoration via the **Checks** permission; if you also want it to leave a
-> summary **comment** on the PR, additionally grant *Pull requests → Read & write*.
+> This is the GitHub App permission set actually configured for the BAUER GROUP
+> org. It matches the SonarSource-documented set (repository import, GitHub
+> login, Checks-based PR status) plus *Pull requests → Read & write*, which the
+> Community Branch Plugin uses to post the PR-decoration comment.
 
 ### Bind a project (enables PR decoration)
 
