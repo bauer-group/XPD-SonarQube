@@ -1,3 +1,9 @@
+## 1.0.0 (2026-06-17)
+
+### 🚀 Features
+
+* added self-hosted SonarQube stack with branch analysis ([182e52e](https://github.com/bauer-group/XPD-SonarQube/commit/182e52e13622e82a35aecac515ce05191d7792c5))
+
 # Changelog
 
 All notable changes to this project are documented in this file.
