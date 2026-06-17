@@ -132,7 +132,7 @@ jobs:
       release-version: ${{ needs.release.outputs.version }}
       image-tags: 'stable'
 
-      update-dockerfile-version: false
+      update-dockerfile-version: true
       auto-tags: true
       latest-tag: true
 
@@ -190,7 +190,7 @@ jobs:
       release-version: ${{ needs.release.outputs.version }}
       image-tags: 'stable'
 
-      update-dockerfile-version: false
+      update-dockerfile-version: true
       auto-tags: true
       latest-tag: true
 

@@ -64,10 +64,13 @@ ENV SONAR_CE_JAVAADDITIONALOPTS="-javaagent:./extensions/plugins/sonarqube-commu
 
 
 # ── OCI / BAUER GROUP labels ────────────────────────────────────────────────
-# Standard image.{version,revision,created} are additionally injected by the CI
-# build action; here we pin the descriptive metadata and the exact component
-# versions baked into the image.
-LABEL org.opencontainers.image.title="SonarQube Community Build" \
+# image.version is the wrapper's own release version (semver) and is kept
+# current automatically by CI (update-dockerfile-version → committed back), so
+# the code version is always readable here without guessing. image.revision /
+# image.created are additionally injected by the CI build action. The SonarQube
+# and plugin versions live in base.name + the com.bauer-group.* labels.
+LABEL org.opencontainers.image.version="1.0.5" \
+      org.opencontainers.image.title="SonarQube Community Build" \
       org.opencontainers.image.description="SonarQube Community Build with Community Branch Plugin (BAUER GROUP Edition)" \
       org.opencontainers.image.vendor="BAUER GROUP" \
       org.opencontainers.image.authors="Karl Bauer <karl.bauer@bauer-group.com>" \
@@ -75,7 +78,6 @@ LABEL org.opencontainers.image.title="SonarQube Community Build" \
       org.opencontainers.image.source="https://github.com/bauer-group/XPD-SonarQube" \
       org.opencontainers.image.url="https://github.com/bauer-group/XPD-SonarQube" \
       org.opencontainers.image.documentation="https://github.com/bauer-group/XPD-SonarQube#readme" \
-      org.opencontainers.image.version="${SONARQUBE_VERSION}" \
       org.opencontainers.image.base.name="docker.io/library/sonarqube:${SONARQUBE_VERSION}" \
       com.bauer-group.image.component="application" \
       com.bauer-group.image.stack="sonarqube" \
