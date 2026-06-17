@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.1...v1.0.2) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* **ci:** passed resolved SonarQube version as KEY=VALUE build-arg ([bc0ae67](https://github.com/bauer-group/XPD-SonarQube/commit/bc0ae679ccb3bfa81b076140a3f3d4a256f668a1))
+
 ## [1.0.1](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.0...v1.0.1) (2026-06-17)
 
 ### 🐛 Bug Fixes
