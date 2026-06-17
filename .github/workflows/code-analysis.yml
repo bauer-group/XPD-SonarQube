@@ -1,0 +1,32 @@
+# =============================================================================
+# Code Quality — self-analysis via the shared reusable workflow
+# =============================================================================
+# Dogfoods this stack: the repo's own code (the Python backup sidecar) is
+# analysed by SonarQube, reusing bauer-group/automation-templates rather than
+# hand-rolling a scanner job. Project config lives in sonar-project.properties.
+#
+# Level A (analysis only) — no coverage, so no custom test job is duplicated.
+# Tolerant: if the org secrets (SONARQUBE_TOKEN / SONARQUBE_HOST_URL) aren't
+# granted to this repo yet, the scan logs a warning and skips (never fails).
+# See docs/ci-integration.md.
+# =============================================================================
+
+name: 🔬 Code Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write   # lets SonarQube decorate the PR (branch plugin)
+
+jobs:
+  code-quality:
+    name: 🔍 SonarQube Analysis
+    uses: bauer-group/automation-templates/.github/workflows/modules-code-quality.yml@main
+    with:
+      enable-sonar: true
+    secrets: inherit

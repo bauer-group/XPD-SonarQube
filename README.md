@@ -125,6 +125,7 @@ See [docs/backup.md](docs/backup.md) for the full backup/restore playbook.
 ## Documentation
 
 - [docs/installation.md](docs/installation.md) — development / traefik / coolify
+- [docs/ci-integration.md](docs/ci-integration.md) — analyse your repos via the reusable CI workflows
 - [docs/security.md](docs/security.md) — users, admin bootstrap, secrets, runtime hardening
 - [docs/authentication.md](docs/authentication.md) — SSO: Entra ID (SAML) & Zitadel (OIDC)
 - [docs/reverse-proxy.md](docs/reverse-proxy.md) — base URL, forwarded headers, TLS
