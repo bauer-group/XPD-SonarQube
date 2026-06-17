@@ -26,8 +26,9 @@ ARG SONARQUBE_VERSION=26.5.0.122743-community
 ARG BRANCH_PLUGIN_VERSION=26.5.0
 # Generic-OIDC SSO (e.g. Zitadel) needs the third-party sonar-auth-oidc plugin.
 # Included by default — verified booting on SonarQube 26.5 (plugin v3.0.0 loads
-# and registers cleanly). Set INCLUDE_OIDC_PLUGIN=false to omit it. SAML SSO
-# (Entra ID) is native and needs no plugin. See docs/authentication.md.
+# and registers cleanly). Set INCLUDE_OIDC_PLUGIN=false to omit it. Used for
+# Codeberg/self-hosted forges; GitHub-hosted projects use native GitHub login
+# (no plugin). See docs/authentication.md.
 ARG INCLUDE_OIDC_PLUGIN=true
 ARG OIDC_PLUGIN_VERSION=3.0.0
 

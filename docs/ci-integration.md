@@ -139,9 +139,9 @@ Per the
 - Ensure the CI job grants `pull-requests: write` (see the workflow examples
   below) so the decoration check can be posted.
 
-> The same GitHub App can also provide **GitHub login** — an alternative to the
-> [Entra ID / Zitadel SSO](authentication.md). Pick one identity provider; you
-> don't need all of them.
+> The same GitHub App also provides **GitHub login** for developers — the
+> recommended sign-in for GitHub-hosted projects (use Zitadel OIDC for
+> Codeberg / self-hosted forges). See [authentication.md](authentication.md).
 
 ---
 

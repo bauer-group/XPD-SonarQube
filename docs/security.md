@@ -28,8 +28,8 @@ How identity, credentials and the runtime are managed in this stack.
 1. Log in as `admin` / `admin` and set a strong admin password (forced).
 2. Create a dedicated **technical user + token** for CI/scanners; don't reuse
    the admin account.
-3. Decide on authentication: local accounts vs. SSO
-   ([Entra ID SAML / Zitadel OIDC](authentication.md)). With SSO, disable
+3. Decide on authentication: local accounts vs. developer SSO
+   ([GitHub auth or Zitadel OIDC](authentication.md)). With SSO, disable
    self-registration so only known identities get in.
 4. Keep **Force user authentication** enabled (default) — no anonymous access.
 
@@ -53,4 +53,4 @@ How identity, credentials and the runtime are managed in this stack.
 * Images carry SBOMs and full OCI provenance labels; versions are pinned and
   reproducible.
 
-See [authentication.md](authentication.md) for wiring SSO (Entra ID / Zitadel).
+See [authentication.md](authentication.md) for wiring developer SSO (GitHub / Zitadel).
