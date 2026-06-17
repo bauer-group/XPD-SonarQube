@@ -7,7 +7,7 @@ numbers to bump by hand.
 
 | Mechanism | What it keeps current |
 | --- | --- |
-| **CI resolver** (`resolve-versions` in `docker-release.yml`) | On every build, takes the latest Community Branch Plugin release and rebuilds the wrapper on the newest matching `…-community` SonarQube tag. Always the freshest WORKING pair. |
+| **CI resolver** (`resolve-versions` in `docker-release.yml`) | On every build, takes the latest Community Branch Plugin release, picks the newest matching `…-community` SonarQube tag, builds with that pair **and commits it back into the Dockerfile's `ARG` lines** — so the Dockerfile is always the current, reproducible source of truth (published == Dockerfile). |
 | **Base-image monitor** (`check-base-images.yml`, daily) | Watches the floating tags (`sonarqube:community`, `python:3.14-alpine`, `postgres:18-alpine`, `busybox:stable`) for digest drift and triggers a rebuild/release when upstream moves. |
 | **Dependabot** (weekly) | Bumps the floating base tags inside the Dockerfiles and the Python deps; the `docker-maintenance` workflow auto-merges Dockerfile bumps. |
 | **`docker compose pull`** | Brings the host's pulled images (postgres, busybox, the wrapper images) up to the latest digest of their floating tags. |

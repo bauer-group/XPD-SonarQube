@@ -65,14 +65,19 @@ jobs:
   # build green and always on the newest WORKING pair — no manual pinning.
 
   resolve-versions:
-    name: 🧭 Resolve SonarQube + plugin pair
+    name: 🧭 Resolve & pin SonarQube + plugin pair
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: read
+      contents: write
     outputs:
       build-args: ${{ steps.r.outputs.build-args }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - id: r
         shell: bash
         run: |
@@ -87,6 +92,9 @@ jobs:
             exit 1
           fi
           echo "Resolved pair: SonarQube=${sq}  branch-plugin=${plugin}"
+
+          # The build still receives the pair as build-args (the build job checks
+          # out the trigger commit, before the commit-back below lands).
           # docker/build-push-action expects newline-separated KEY=VALUE pairs.
           {
             echo "build-args<<__ARGS__"
@@ -94,6 +102,29 @@ jobs:
             echo "BRANCH_PLUGIN_VERSION=${plugin}"
             echo "__ARGS__"
           } >> "$GITHUB_OUTPUT"
+
+          # ── Commit the resolved pair BACK into the Dockerfile ARGs ──────────
+          # Keeps the Dockerfile the single source of truth: published == file.
+          # Skipped on PRs. GITHUB_TOKEN pushes do NOT re-trigger workflows, so
+          # this never loops; the rebase-retry guards against a concurrent push.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then exit 0; fi
+          df="src/sonarqube/Dockerfile"
+          sed -i -E "s|^(ARG SONARQUBE_VERSION=).*|\1${sq}|" "$df"
+          sed -i -E "s|^(ARG BRANCH_PLUGIN_VERSION=).*|\1${plugin}|" "$df"
+          if git diff --quiet -- "$df"; then
+            echo "Dockerfile already at the resolved pair — nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$df"
+          git commit -m "chore: pinned SonarQube ${sq} + branch-plugin ${plugin} [skip ci]"
+          for attempt in 1 2 3; do
+            if git push; then echo "pushed"; break; fi
+            echo "push rejected — rebasing (attempt ${attempt})…"
+            git pull --rebase --autostash origin "${{ github.ref_name }}"
+            sleep 3
+          done
 
   # ============================================
   # Release Job (only on main branch push)
