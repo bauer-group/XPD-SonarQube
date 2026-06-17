@@ -86,7 +86,7 @@ ENV SONAR_CE_JAVAADDITIONALOPTS="-javaagent:./extensions/plugins/sonarqube-commu
 # the code version is always readable here without guessing. image.revision /
 # image.created are additionally injected by the CI build action. The SonarQube
 # and plugin versions live in base.name + the com.bauer-group.* labels.
-LABEL org.opencontainers.image.version="1.1.0" \
+LABEL org.opencontainers.image.version="1.2.0" \
       org.opencontainers.image.title="SonarQube Community Build" \
       org.opencontainers.image.description="SonarQube Community Build with Community Branch Plugin (BAUER GROUP Edition)" \
       org.opencontainers.image.vendor="BAUER GROUP" \
