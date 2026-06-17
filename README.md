@@ -32,10 +32,10 @@ images, `semantic-release`, Dependabot and daily base-image monitoring.
        └────┬────┘
             │
    ┌────────▼─────────────────────────────────┐
-   │  sonarqube  ──►  db (PostgreSQL 16)        │  ── local network
+   │  sonarqube  ──►  postgres (PostgreSQL 18)  │  ── local network
    │     ▲                                       │
    │     └── sonarqube-init (sets vm.max_map_count, one-shot, privileged)
-   │  sonarqube-backup (optional, profile: backup) ──► db
+   │  sonarqube-backup (optional, profile: backup) ──► postgres
    └─────────────────────────────────────────────┘
 ```
 

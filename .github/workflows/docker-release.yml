@@ -39,7 +39,7 @@ jobs:
     with:
       compose-files: '["docker-compose.coolify.yml", "docker-compose.traefik.yml", "docker-compose.development.yml"]'
       env-file: '.env.example'
-      validate-services: '["db", "sonarqube"]'
+      validate-services: '["postgres", "sonarqube"]'
 
   validate-scripts:
     name: 🔍 Validate Shell Scripts

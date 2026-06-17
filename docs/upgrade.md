@@ -49,5 +49,5 @@ migration:
 
 `POSTGRES_VERSION` is intentionally major-pinned (`18-alpine`) so it patch-floats
 but never auto-jumps majors — a major PostgreSQL upgrade is not an in-place
-volume swap. To move majors: back up with the sidecar, recreate the `db` volume
+volume swap. To move majors: back up with the sidecar, recreate the `postgres` volume
 on the new major, restore. Keep the backup image's `PG_MAJOR` build arg in step.
