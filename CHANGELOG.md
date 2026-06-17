@@ -1,3 +1,9 @@
+## [1.0.4](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.3...v1.0.4) (2026-06-17)
+
+### 🐛 Bug Fixes
+
+* **docker:** pinned versions, full OCI labels, multistage wrapper build ([b04c126](https://github.com/bauer-group/XPD-SonarQube/commit/b04c12685e77d18d54007cec633e4a4c8600bb06))
+
 ## [1.0.3](https://github.com/bauer-group/XPD-SonarQube/compare/v1.0.2...v1.0.3) (2026-06-17)
 
 ### 🐛 Bug Fixes
