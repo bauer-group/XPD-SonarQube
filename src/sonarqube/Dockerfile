@@ -34,7 +34,7 @@ ARG OIDC_PLUGIN_VERSION=3.0.0
 
 
 # ── Stage 1: fetch & verify the plugins ──────────────────────────────────────
-FROM alpine:3.22 AS plugin
+FROM alpine:3.24 AS plugin
 
 ARG BRANCH_PLUGIN_VERSION
 # Optional supply-chain check: pass the JAR's sha256 to verify the download.
