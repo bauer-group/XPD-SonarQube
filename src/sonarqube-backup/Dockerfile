@@ -41,7 +41,7 @@ VOLUME ["/data"]
 # OCI / BAUER GROUP labels — image.version (code/release version) is kept
 # current by CI (update-dockerfile-version → committed back); image.revision /
 # image.created are injected by the build action.
-LABEL org.opencontainers.image.version="1.2.3" \
+LABEL org.opencontainers.image.version="1.2.4" \
       org.opencontainers.image.title="SonarQube Backup Sidecar" \
       org.opencontainers.image.description="Scheduled PostgreSQL backup for the SonarQube stack (BAUER GROUP Edition)" \
       org.opencontainers.image.vendor="BAUER GROUP" \
