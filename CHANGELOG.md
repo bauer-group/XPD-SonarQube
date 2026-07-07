@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/bauer-group/XPD-SonarQube/compare/v1.2.4...v1.3.0) (2026-07-07)
+
+### 🚀 Features
+
+* **backup:** migrated sonarqube-backup to the central BackupHelper engine ([6add0fb](https://github.com/bauer-group/XPD-SonarQube/commit/6add0fbf72e5f2c9b087dab0e1dd388063e16082))
+
 ## [1.2.4](https://github.com/bauer-group/XPD-SonarQube/compare/v1.2.3...v1.2.4) (2026-07-02)
 
 ## [1.2.3](https://github.com/bauer-group/XPD-SonarQube/compare/v1.2.2...v1.2.3) (2026-06-18)
