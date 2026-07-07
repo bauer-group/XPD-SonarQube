@@ -10,11 +10,11 @@
       "description": "SonarQube Community Build — floating base of the wrapper image. On drift, docker-release.yml re-resolves the newest plugin-compatible version (see the resolve-versions job)."
     },
     {
-      "name": "python-alpine",
-      "image": "python",
-      "tag": "3.14-alpine",
-      "variable": "PYTHON_ALPINE_DIGEST",
-      "description": "Floating base of the sonarqube-backup image (minor-pinned, patch-floating). Dependabot bumps the minor; the monitor catches patch/digest drift."
+      "name": "backuphelper",
+      "image": "ghcr.io/bauer-group/cs-backuphelper/backuphelper",
+      "tag": "latest",
+      "variable": "BACKUPHELPER_DIGEST",
+      "description": "Central BackupHelper engine — floating base of the sonarqube-backup meta image. On digest drift, docker-release.yml rebuilds/republishes the backup sidecar."
     },
     {
       "name": "postgres",

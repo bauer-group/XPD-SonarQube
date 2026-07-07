@@ -59,7 +59,7 @@ updates:
     commit-message:
       prefix: "chore(docker)"
 
-  # sonarqube-backup base image (python:*-alpine in src/sonarqube-backup/Dockerfile)
+  # sonarqube-backup base image (FROM the central BackupHelper image in src/sonarqube-backup/Dockerfile)
   - package-ecosystem: "docker"
     directory: "/src/sonarqube-backup"
     schedule:
@@ -73,18 +73,3 @@ updates:
       - "dependabot"
     commit-message:
       prefix: "chore(docker)"
-
-  # sonarqube-backup Python deps (requirements.txt + requirements-test.txt)
-  - package-ecosystem: "pip"
-    directory: "/src/sonarqube-backup"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-      time: "06:30"
-      timezone: "Etc/UTC"
-    labels:
-      - "dependencies"
-      - "python"
-      - "dependabot"
-    commit-message:
-      prefix: "chore(deps)"
