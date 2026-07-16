@@ -27,6 +27,11 @@ permissions:
   pull-requests: write
   packages: write
   security-events: write
+  # Required by docker-build.yml@main: a declared permissions: block sets every
+  # unlisted scope to none, and the reusable workflow now needs these three.
+  attestations: write   # write the build-provenance attestation
+  id-token: write       # OIDC token to sign the attestation (keyless/Sigstore)
+  actions: read         # its nested security-analysis job reads run metadata
 
 # Serialize release runs on a branch so concurrent runs never race on the
 # semantic-release git push (the "rejected push loop"). Queue, never cancel —
