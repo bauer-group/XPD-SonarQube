@@ -1,3 +1,9 @@
+## [1.3.2](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.1...v1.3.2) (2026-08-04)
+
+### 🐛 Bug Fixes
+
+* **ci:** added the missing permissions block ([325ac74](https://github.com/bauer-group/XPD-SonarQube/commit/325ac744c0d87c0b743b4e091d0f1aa4be5286b8))
+
 ## [1.3.1](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.0...v1.3.1) (2026-07-08)
 
 ## [1.3.0](https://github.com/bauer-group/XPD-SonarQube/compare/v1.2.4...v1.3.0) (2026-07-07)
