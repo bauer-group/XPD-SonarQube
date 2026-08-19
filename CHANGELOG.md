@@ -1,3 +1,5 @@
+## [1.3.5](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.4...v1.3.5) (2026-08-19)
+
 ## [1.3.4](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.3...v1.3.4) (2026-08-14)
 
 ## [1.3.3](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.2...v1.3.3) (2026-08-06)
