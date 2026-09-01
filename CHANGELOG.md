@@ -1,3 +1,11 @@
+# Changelog
+
+All notable changes to this project are documented here. This file is maintained
+automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
+on every release to `main`.
+
+## [1.3.7](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.6...v1.3.7) (2026-09-01)
+
 ## [1.3.6](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.5...v1.3.6) (2026-08-22)
 
 ## [1.3.5](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.4...v1.3.5) (2026-08-19)
