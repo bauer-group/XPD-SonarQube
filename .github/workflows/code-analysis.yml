@@ -13,17 +13,14 @@
 
 name: 🔬 Code Quality
 
-# Only changes the analysis can see trigger a scan (sonar.sources=scripts).
-# Every push to main otherwise scanned this very SonarQube while it was
-# unavailable (HTTP 502/503) - mostly on the empty base-image commits, which
-# contain nothing to analyse.
+# No push trigger on purpose: every push to main redeploys this very
+# SonarQube, so a scan started by the same push hits the restart ("503 no
+# available server", reset JRE/plugin downloads). Pull requests do not deploy,
+# and the weekly main-branch scan runs while no deployment is in progress.
+# Only changes the analysis can see trigger a PR scan (sonar.sources=scripts).
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'scripts/**'
-      - 'sonar-project.properties'
-      - '.github/workflows/code-analysis.yml'
+  schedule:
+    - cron: '23 5 * * 1'   # Monday 05:23 UTC - main-branch analysis
   pull_request:
     branches: [main]
     paths:
