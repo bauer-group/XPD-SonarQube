@@ -42,4 +42,9 @@ jobs:
     uses: bauer-group/automation-templates/.github/workflows/modules-code-quality.yml@main
     with:
       enable-sonar: true
+      # Use the runner's preinstalled JDK instead of downloading a JRE from
+      # this server: the large JRE download kept being cut by the edge proxy
+      # (HTTP/2 RST_STREAM), and the scanner cache is only saved after a
+      # successful run, so every run had to download it again.
+      args: -Dsonar.scanner.skipJreProvisioning=true
     secrets: inherit
