@@ -13,11 +13,23 @@
 
 name: 🔬 Code Quality
 
+# Only changes the analysis can see trigger a scan (sonar.sources=scripts).
+# Every push to main otherwise scanned this very SonarQube while it was
+# unavailable (HTTP 502/503) - mostly on the empty base-image commits, which
+# contain nothing to analyse.
 on:
   push:
     branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'sonar-project.properties'
+      - '.github/workflows/code-analysis.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'sonar-project.properties'
+      - '.github/workflows/code-analysis.yml'
   workflow_dispatch:   # manual run, e.g. to validate the SonarQube connection
 
 permissions:
