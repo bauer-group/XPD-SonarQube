@@ -139,9 +139,9 @@ check runs three times — before the backup (present), after the deletion (abse
 and after the restore (present) — so a restore that writes nothing cannot pass.
 The search index check is the one that caught stale indexes after a restore.
 
-A run takes about 3 minutes: under a minute to build both images, about 45 s for
-the first boot, 30 s for the restart with the full reindex, the rest for the
-backup and the checks. It starts on pushes to `main` (documentation-only pushes
+A run takes about 3 minutes (2 min 43 s measured): about 40 s to build both
+images, 45 to 50 s for the first boot, 30 to 40 s for the restart with the full
+reindex, the rest for the backup and the checks. It starts on pushes to `main` (documentation-only pushes
 excluded), on every `workflow_dispatch`, and on pull requests that touch `src/`,
 a compose file, `.env.example`, the round-trip scripts or the release workflow.
 When it fails, the run's summary names the failed phase, and the
