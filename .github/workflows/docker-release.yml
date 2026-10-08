@@ -14,6 +14,8 @@ on:
       - 'docker-compose*.yml'
       - '.dockerignore'
       - '.env.example'
+      - 'tests/backup-roundtrip/**'
+      - '.github/workflows/docker-release.yml'
   workflow_dispatch:
     inputs:
       force-release:
@@ -141,16 +143,63 @@ jobs:
           done
 
   # ============================================
+  # Backup round trip (gates every release)
+  # ============================================
+  # Builds both images from this commit - SonarQube with the plugin pair
+  # resolve-versions picked, the sidecar FROM the newest BackupHelper engine -
+  # starts the Coolify stack with the backup profile, creates a project through
+  # the SonarQube API, backs it up, deletes it, restores the snapshot and checks
+  # that PostgreSQL, the API and the Projects page (search index) have it back.
+  # Every release rebuilds the images from the newest bases - also the one the
+  # base image monitor dispatches - so this runs on every push, dispatch and
+  # relevant PR. Docs-only pushes never reach it (paths-ignore).
+
+  backup-roundtrip:
+    name: 🧪 Backup Round Trip
+    needs: [validate-compose, validate-scripts, resolve-versions]
+    permissions:
+      contents: read
+      packages: read
+    uses: bauer-group/automation-templates/.github/workflows/modules-backup-roundtrip-test.yml@main
+    with:
+      # No published ports and no external proxy network: the Coolify variant
+      # runs on a plain runner as it is.
+      compose-file: 'docker-compose.coolify.yml'
+      profiles: 'backup'
+      env-overrides: |
+        STACK_NAME=sonarqube_roundtrip
+      generated-secrets: 'POSTGRES_PASSWORD'
+      # toJSON() turns the newline-separated build-args into a JSON string.
+      build-images: |
+        [
+          {"service": "sonarqube", "context": "src/sonarqube",
+           "build-args": ${{ toJSON(needs.resolve-versions.outputs.build-args) }}},
+          {"service": "sonarqube-backup", "context": "src/sonarqube-backup"}
+        ]
+      backup-service: 'sonarqube-backup'
+      # The postgres source is named after the database (POSTGRES_DB).
+      require-components: 'sonar'
+      services-to-stop-before-restore: 'sonarqube'
+      seed-script: 'tests/backup-roundtrip/seed.sh'
+      mutate-script: 'tests/backup-roundtrip/mutate.sh'
+      check-script: 'tests/backup-roundtrip/check.sh'
+      # First boot runs the database migrations and builds the search indexes.
+      wait-timeout: 900
+      free-disk-space: true
+    secrets: inherit
+
+  # ============================================
   # Release Job (only on main branch push)
   # ============================================
 
   release:
     name: 📦 Create Semantic Release
-    needs: [validate-compose, validate-scripts]
+    needs: [validate-compose, validate-scripts, backup-roundtrip]
     if: |
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       needs.validate-compose.result == 'success' &&
-      needs.validate-scripts.result == 'success'
+      needs.validate-scripts.result == 'success' &&
+      needs.backup-roundtrip.result == 'success'
     uses: bauer-group/automation-templates/.github/workflows/modules-semantic-release.yml@main
     with:
       target-branch: 'main'
