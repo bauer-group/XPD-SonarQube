@@ -19,6 +19,7 @@ images, `semantic-release`, Dependabot and daily base-image monitoring.
 | 🔐 **HTTPS** | Traefik + Let's Encrypt on a dedicated subdomain |
 | ⚙️ **Kernel-ready** | Privileged init sidecar sets `vm.max_map_count` automatically |
 | 💾 **Backups** | Optional scheduled `pg_dump` sidecar (S3 off-site + alerting) |
+| 🧪 **Release gate** | Every release first backs up, deletes and restores a seeded project on the full stack ([docs/backup.md](docs/backup.md#round-trip-test-in-ci)) |
 | 🚀 **CI/CD** | semantic-release, multi-image build, Dependabot, base-image monitor |
 
 ## Architecture
@@ -72,7 +73,8 @@ docker compose -f docker-compose.traefik.yml up -d
 ├── scripts/generate-env.py          # secret generator (stdlib, cross-platform)
 ├── src/
 │   ├── sonarqube/                   # wrapper image: Community Build + branch plugin
-│   └── sonarqube-backup/            # pg_dump backup sidecar (Python, tested)
+│   └── sonarqube-backup/            # backup sidecar: BackupHelper meta image + restore hook
+├── tests/backup-roundtrip/          # seed/mutate/check scripts of the CI backup round trip
 ├── docs/                            # installation, reverse-proxy, branch-analysis, backup, upgrade
 └── .github/                         # CI/CD: release, docker build, dependabot, monitors
 ```
@@ -88,7 +90,7 @@ drift — there are no version numbers to maintain by hand.
 | SonarQube base | `sonarqube:community` | CI resolver (plugin-compatible) |
 | Branch plugin  | derived from base     | Dockerfile (no pin)             |
 | PostgreSQL     | `postgres:18-alpine`  | patch-floating                  |
-| Backup base    | `python:3.14-alpine`  | patch-floating + Dependabot     |
+| Backup base    | `backuphelper:latest` | base-image monitor + Dependabot |
 | Init sidecar   | `busybox:stable`      | floating                        |
 | Wrapper images | `sonarqube:latest`    | CI + base-image monitor         |
 
@@ -131,7 +133,7 @@ See [docs/backup.md](docs/backup.md) for the full backup/restore playbook.
 - [docs/authentication.md](docs/authentication.md) — developer SSO: GitHub auth & Zitadel (OIDC)
 - [docs/reverse-proxy.md](docs/reverse-proxy.md) — base URL, forwarded headers, TLS
 - [docs/branch-analysis.md](docs/branch-analysis.md) — Community Branch Plugin
-- [docs/backup.md](docs/backup.md) — backup & restore
+- [docs/backup.md](docs/backup.md) — backup & restore, the CI round-trip test
 - [docs/upgrade.md](docs/upgrade.md) — version upgrades & plugin compatibility
 
 ## License

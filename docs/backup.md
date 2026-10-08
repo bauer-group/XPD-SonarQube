@@ -4,18 +4,21 @@ The `sonarqube-backup` sidecar dumps the **PostgreSQL database** — the only
 stateful component worth backing up. Elasticsearch indexes (`sonarqube-data`)
 and plugins (baked into the image) are rebuildable and are not backed up.
 
-Activated by the `backup` compose profile.
+Activated by the `backup` compose profile. The sidecar is a meta image on the
+central [BackupHelper](https://github.com/bauer-group/cs-backuphelper) engine;
+its CLI is `backuphelper` (the container's entrypoint).
 
 ## What a backup contains
 
-A single `.tar.gz` per run, named `<instance>-YYYYmmdd-HHMMSS.tar.gz`, holding:
+One snapshot per run, identified by its timestamp (`YYYY-MM-DD_HH-MM-SS`):
 
-- the `pg_dump` output (`database.dump` for `custom`, `database.sql` for `plain`)
-- a `manifest.json` with the SHA-256, byte size, format and timestamp
+- `<id>.tar.gz` — the `pg_dump` of the `sonar` database (component `sonar`,
+  `custom` format by default, `plain` via `SONARQUBE_BACKUP_DUMP_FORMAT`)
+- `<id>.manifest.json` — components, sizes and SHA-256 checksums
 
-Archives live in the `sonarqube-backup` volume (`/data`) and, if configured, are
+Snapshots live in the `sonarqube-backup` volume (`/data`) and, if configured, are
 uploaded to an external S3 bucket. Retention keeps the newest
-`SONARQUBE_BACKUP_RETENTION_COUNT` archives locally **and** in S3.
+`SONARQUBE_BACKUP_RETENTION_COUNT` snapshots locally **and** in S3.
 
 ## Scheduling
 
@@ -36,13 +39,16 @@ docker compose -f docker-compose.traefik.yml --profile backup up -d
 
 ```bash
 # one backup now
-docker compose ... --profile backup run --rm sonarqube-backup --now
+docker compose ... --profile backup run --rm sonarqube-backup create
 
-# list local archives
+# list local snapshots
 docker compose ... --profile backup run --rm sonarqube-backup list
 
-# verify an archive's integrity (re-hashes the dump vs. the manifest)
-docker compose ... --profile backup run --rm sonarqube-backup verify sonarqube-20260617-031500.tar.gz
+# show a snapshot's components
+docker compose ... --profile backup run --rm sonarqube-backup show 2026-06-17_03-15-00
+
+# verify a snapshot's integrity (re-hashes the archive vs. the manifest)
+docker compose ... --profile backup run --rm sonarqube-backup verify 2026-06-17_03-15-00
 ```
 
 ## Off-site target (optional)
@@ -60,18 +66,39 @@ SONARQUBE_BACKUP_S3_PREFIX=sonarqube/
 ## Restore (disaster recovery)
 
 > **Destructive.** `restore` drops & recreates objects in the target database.
-> Point it at an empty or standby database. It refuses to run if the archive
-> fails its SHA-256 integrity check.
+> It refuses to run if the archive fails its SHA-256 integrity check.
 
 ```bash
-# 1. Stop SonarQube so nothing writes during the restore
+# 1. Verify the snapshot before touching anything
+docker compose -f docker-compose.traefik.yml --profile backup run --rm sonarqube-backup verify 2026-06-17_03-15-00
+
+# 2. Stop SonarQube so nothing writes during the restore
 docker compose -f docker-compose.traefik.yml stop sonarqube
 
-# 2. (custom format) restore into the live DB
-docker compose ... --profile backup run --rm sonarqube-backup restore sonarqube-20260617-031500.tar.gz
+# 3. Restore the database (and drop the search indexes, see below)
+docker compose -f docker-compose.traefik.yml --profile backup run --rm sonarqube-backup restore 2026-06-17_03-15-00 --force
 
-# 3. Start SonarQube; it rebuilds the Elasticsearch indexes from the DB on boot
+# 4. Start SonarQube; it rebuilds the search indexes from the restored database
 docker compose -f docker-compose.traefik.yml up -d sonarqube
+```
+
+**Search indexes.** SonarQube keeps its search indexes (Projects page, issues,
+rules) in Elasticsearch below `/opt/sonarqube/data/es8` and only rebuilds an
+index that is missing. After a database restore the old indexes would still show
+the data as it was before the restore, so
+[SonarQube's restore procedure](https://docs.sonarsource.com/sonarqube-community-build/server-update-and-maintenance/maintenance/backup-and-restore)
+drops them. The sidecar does this itself: after the database restore it empties
+`es8` on the `sonarqube-data` volume, which the compose files mount into it at
+`/sonarqube/data`. The next start then reindexes everything — on a large instance
+SonarQube takes correspondingly longer to report `UP`.
+
+If `restore` ends with *"search indexes were NOT dropped"*, the sidecar runs from
+a compose file without that mount. The database is restored; drop the indexes by
+hand before step 4:
+
+```bash
+docker compose -f docker-compose.traefik.yml run --rm --no-deps --entrypoint sh sonarqube \
+  -c 'rm -rf /opt/sonarqube/data/es8/*'
 ```
 
 A SonarQube database restore must target the **same SonarQube major version**
@@ -86,3 +113,37 @@ SONARQUBE_BACKUP_ALERT_CHANNELS=email,teams    # email,webhook,teams
 SONARQUBE_BACKUP_ALERT_EMAIL=ops@example.com    # + SMTP_* for the email channel
 SONARQUBE_BACKUP_TEAMS_WEBHOOK=https://...
 ```
+
+## Round-trip test in CI
+
+Every release is gated on a real backup and restore of this stack. The job
+`🧪 Backup Round Trip` in [docker-release.yml](../.github/workflows/docker-release.yml)
+calls the reusable
+[`modules-backup-roundtrip-test.yml`](https://github.com/bauer-group/automation-templates/blob/main/docs/workflows/modules-backup-roundtrip-test.md)
+and runs before the release job, which needs it to pass. It also runs when the
+base image monitor dispatches a release after a new SonarQube or BackupHelper
+engine image, so neither ships before it restored SonarQube data.
+
+| Phase | What happens |
+|-------|--------------|
+| Build | `src/sonarqube` (with the SonarQube/plugin pair `resolve-versions` picked) and `src/sonarqube-backup` are built from the commit, with fresh base images |
+| Start | `docker-compose.coolify.yml` with the `backup` profile and a generated `POSTGRES_PASSWORD` |
+| Seed | Through the SonarQube web API: a project whose key and name are the run's marker |
+| Back up | `create`, then `show` must list `sonar` without errors or warnings, `verify` must report `OK` |
+| Delete | The project, through the web API |
+| Restore | `sonarqube` is stopped, `restore <id> --force` runs (database and index drop), the stack is started again |
+| Check | The project in the `projects` table, in `api/projects/search` (reads the database) and on the Projects page, `api/components/search_projects` (reads the search index) |
+
+The scripts live in [`tests/backup-roundtrip/`](../tests/backup-roundtrip/). The
+check runs three times — before the backup (present), after the deletion (absent)
+and after the restore (present) — so a restore that writes nothing cannot pass.
+The search index check is the one that caught stale indexes after a restore.
+
+A run takes about 3 minutes: under a minute to build both images, about 45 s for
+the first boot, 30 s for the restart with the full reindex, the rest for the
+backup and the checks. It starts on pushes to `main` (documentation-only pushes
+excluded), on every `workflow_dispatch`, and on pull requests that touch `src/`,
+a compose file, `.env.example`, the round-trip scripts or the release workflow.
+When it fails, the run's summary names the failed phase, and the
+`backup-roundtrip-diagnostics` artifact holds every service's log,
+`docker compose ps`, the snapshot list and the manifest.
