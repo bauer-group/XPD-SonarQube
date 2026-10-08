@@ -188,7 +188,8 @@ jobs:
       check-script: 'tests/backup-roundtrip/check.sh'
       # First boot runs the database migrations and builds the search indexes.
       wait-timeout: 900
-      free-disk-space: true
+      # free-disk-space stays off: the stack needs under 5 GB (3.8 GB images,
+      # 0.9 GB volumes) on a runner with 87 GB free; freeing more costs 2 min.
     secrets: inherit
 
   # ============================================
