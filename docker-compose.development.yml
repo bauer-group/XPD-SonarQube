@@ -204,6 +204,10 @@ services:
         }
     volumes:
       - sonarqube-backup-data:/data
+      # SonarQube's data volume: after a restore the sidecar empties the search
+      # indexes in it (es8), so SonarQube rebuilds them from the restored
+      # database on its next start. Nothing is backed up from it.
+      - sonarqube-data:/sonarqube/data
     networks:
       local:
 
