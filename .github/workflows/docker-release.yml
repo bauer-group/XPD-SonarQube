@@ -83,7 +83,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.ref_name }}
+          # The branch, so the commit-back below can push to it. A PR's ref
+          # name (<n>/merge) is no branch; an empty ref checks out the PR's
+          # merge commit, and PRs never commit back.
+          ref: ${{ github.event_name != 'pull_request' && github.ref_name || '' }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: r
         shell: bash
