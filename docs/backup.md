@@ -169,3 +169,40 @@ a compose file, `.env.example`, the round-trip scripts or the release workflow.
 When it fails, the run's summary names the failed phase, and the
 `backup-roundtrip-diagnostics` artifact holds every service's log,
 `docker compose ps`, the snapshot list and the manifest.
+
+### Upgrade, off-site copy and compose variants
+
+A second job, `🧪 Backup Round Trip (upgrade, S3, <variant>)`, runs the way
+production gets there, once with `docker-compose.coolify.yml` and once with
+`docker-compose.traefik.yml`. The release needs both jobs.
+
+| Phase | What happens |
+|-------|--------------|
+| Previous release | The latest XPD-SonarQube release (`sonarqube` and `sonarqube-backup` images, release tag `vX.Y.Z` → image tag `X.Y.Z`) starts with the compose file of the commit. The module checks that both containers run the release, then the release seeds the project and backs it up with its own sidecar |
+| Off-site copy | A throwaway MinIO is the S3 destination (`SONARQUBE_BACKUP_S3_*` point at it); archive and manifest must be in the bucket with the local size |
+| Upgrade | [`upgrade.sh`](../tests/backup-roundtrip/upgrade.sh) starts the database migration watcher, then the images built from the commit take over `sonarqube:latest` and `sonarqube-backup:latest`, and `docker compose up -d` recreates both containers. Both must then run the build of the commit, compared by the image id tagged before `up`. The project must still be there, and `backuphelper healthcheck` must pass in the new sidecar |
+| New host | After the project is deleted, the `sonarqube-backup` container is removed and its data volume emptied; the new sidecar must list the snapshot as `(off-site only)` |
+| Restore | The new sidecar restores the **previous release's** snapshot, downloading it from S3 first; the check must find the project again, and the downloaded snapshot must pass `verify` |
+
+**Database migrations.** When the commit moves to a newer SonarQube than the
+latest release runs, the new SonarQube finds an older schema and waits in
+`DB_MIGRATION_NEEDED` — not `UP`, so not healthy — until someone starts the
+migration on `/setup` ([upgrade.md](upgrade.md#sonarqube-database-migrations)).
+The restore puts that older schema back, so it asks again after the restore.
+[`migrate-db.sh`](../tests/backup-roundtrip/migrate-db.sh), which `upgrade.sh`
+starts in the background, is that operator: whenever SonarQube reports
+`DB_MIGRATION_NEEDED`, it calls `POST api/system/migrate_db`, the call `/setup`
+makes. It changes nothing else: SonarQube must still become healthy within the
+wait timeout, and the check must still find the project. Its log,
+`sonarqube-migrate-db.log`, is part of the diagnostics artifact.
+
+The Traefik variant joins the external network `PROXY_NETWORK` names; the job
+creates it for the run. Traefik itself is not started, so its routing is not
+tested. Each variant uploads its own
+`backup-roundtrip-upgrade-<variant>-diagnostics` artifact on failure.
+
+A release exists before its images do: the image jobs push `X.Y.Z` a minute or
+two after semantic-release created `vX.Y.Z`. A run that pulls the latest release
+in between — or any run after an image job of that release failed — stops at
+*Pull previous release* with a message saying so, and the next release waits for
+it. Re-run the failed image job (or the round trip once the images are there).

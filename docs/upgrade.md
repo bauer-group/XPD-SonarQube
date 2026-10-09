@@ -38,7 +38,10 @@ migration:
 1. **Back up the database first** (`--now`, then `verify`) — see [backup.md](backup.md).
 2. `docker compose -f docker-compose.traefik.yml pull && up -d`.
 3. If a migration is required, SonarQube shows a maintenance page — open
-   `https://${SONARQUBE_HOSTNAME}/setup` and trigger the upgrade.
+   `https://${SONARQUBE_HOSTNAME}/setup` and trigger the upgrade. A release that moves
+   to a newer SonarQube is tested this way before it ships: the upgrade round
+   trip in CI starts the migration through the API call `/setup` makes (see
+   [backup.md](backup.md#upgrade-off-site-copy-and-compose-variants)).
 4. Do not skip more than one LTA/major at a time; follow SonarQube's official
    upgrade path for large jumps.
 
