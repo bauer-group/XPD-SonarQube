@@ -5,11 +5,15 @@
 #   1. GitHub Actions versions (workflows pinned to @main pull module updates)
 #   2. Image references inside docker-compose*.yml files
 #   3. Base images inside the two Dockerfiles
-#   4. Python deps of the backup sidecar
+#
+# The backup sidecar has no Python requirements of its own: it is built FROM
+# the central BackupHelper engine image, whose dependencies are maintained in
+# that repository.
 #
 # Pure digest drift on existing floating tags is handled by check-base-images.yml
-# (daily cron). The SonarQube ↔ branch-plugin version pair is bumped manually
-# (see docs/upgrade.md) — Dependabot does not track the GitHub-release JAR.
+# (daily cron). The SonarQube ↔ branch-plugin version pair is resolved by the
+# resolve-versions job of docker-release.yml on every build (see
+# docs/upgrade.md) — Dependabot does not track the GitHub-release JAR.
 # =============================================================================
 
 version: 2

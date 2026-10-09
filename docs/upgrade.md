@@ -8,8 +8,8 @@ numbers to bump by hand.
 | Mechanism | What it keeps current |
 | --- | --- |
 | **CI resolver** (`resolve-versions` in `docker-release.yml`) | On every build, takes the latest Community Branch Plugin release, picks the newest matching `…-community` SonarQube tag, builds with that pair **and commits it back into the Dockerfile's `ARG` lines** — so the Dockerfile is always the current, reproducible source of truth (published == Dockerfile). |
-| **Base-image monitor** (`check-base-images.yml`, daily) | Watches the floating tags (`sonarqube:community`, `python:3.14-alpine`, `postgres:18-alpine`, `busybox:stable`) for digest drift and triggers a rebuild/release when upstream moves. |
-| **Dependabot** (weekly) | Bumps the floating base tags inside the Dockerfiles and the Python deps; the `docker-maintenance` workflow auto-merges Dockerfile bumps. |
+| **Base-image monitor** (`check-base-images.yml`, daily) | Watches the floating tags (`sonarqube:community`, `ghcr.io/bauer-group/cs-backuphelper/backuphelper:latest`, `postgres:18-alpine`, `busybox:stable`) for digest drift and triggers a rebuild/release when upstream moves. |
+| **Dependabot** (weekly) | Bumps the base tags inside the Dockerfiles, the compose image tags and the GitHub Actions versions; the `docker-maintenance` workflow auto-merges its PRs once their checks pass. |
 | **`docker compose pull`** | Brings the host's pulled images (postgres, busybox, the wrapper images) up to the latest digest of their floating tags. |
 
 So a routine "upgrade" is just: let CI/Dependabot do their thing, then on the
@@ -50,4 +50,8 @@ migration:
 `POSTGRES_VERSION` is intentionally major-pinned (`18-alpine`) so it patch-floats
 but never auto-jumps majors — a major PostgreSQL upgrade is not an in-place
 volume swap. To move majors: back up with the sidecar, recreate the `postgres` volume
-on the new major, restore. Keep the backup image's `PG_MAJOR` build arg in step.
+on the new major, restore. The sidecar's `pg_dump` and `pg_restore` come from the
+BackupHelper engine image it is built on (PostgreSQL 18 client tools, see
+`PG_CLIENT_VERSION` in [bauer-group/cs-backuphelper](https://github.com/bauer-group/cs-backuphelper)).
+`pg_dump` cannot dump a server of a newer major, so before moving to a newer
+PostgreSQL major, make sure the engine ships client tools of at least that major.
