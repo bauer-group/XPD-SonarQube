@@ -156,12 +156,14 @@ jobs:
   # ============================================
   # Builds both images from this commit - SonarQube with the plugin pair
   # resolve-versions picked, the sidecar FROM the newest BackupHelper engine -
-  # starts the Coolify stack with the backup profile, creates a project through
-  # the SonarQube API, backs it up, deletes it, restores the snapshot and checks
-  # that PostgreSQL, the API and the Projects page (search index) have it back.
-  # Every release rebuilds the images from the newest bases - also the one the
-  # base image monitor dispatches - so this runs on every push, dispatch and
-  # relevant PR. Docs-only pushes never reach it (paths-ignore).
+  # starts the Coolify stack with the backup profile on fresh volumes, creates
+  # a project through the SonarQube API, backs it up, deletes it, restores the
+  # snapshot and checks that PostgreSQL, the API and the Projects page (search
+  # index) have it back. The second job below does the same as an upgrade with
+  # an off-site copy, per compose variant; the release needs both. Every
+  # release rebuilds the images from the newest bases - also the one the base
+  # image monitor dispatches - so both run on every push, dispatch and
+  # relevant PR. Docs-only pushes never reach them (paths-ignore).
 
   backup-roundtrip:
     name: 🧪 Backup Round Trip
@@ -198,18 +200,88 @@ jobs:
       # 0.9 GB volumes) on a runner with 87 GB free; freeing more costs 2 min.
     secrets: inherit
 
+  # The way production gets there, once per compose variant operators deploy:
+  # the latest release (sonarqube and sonarqube-backup images) starts, seeds a
+  # project and backs it up - also to an S3 bucket (a throwaway MinIO). Then
+  # the stack is upgraded to the images built from this commit like an
+  # operator does (images switched, compose up -d); the project must survive
+  # it and the new sidecar must be healthy with the old snapshot. The project
+  # is deleted, the sidecar's data volume is wiped like on a new host, and the
+  # new sidecar restores the old snapshot from S3. The Traefik file joins the
+  # external proxy network, which is created for the run.
+  backup-roundtrip-upgrade:
+    name: 🧪 Backup Round Trip (upgrade, S3, ${{ matrix.variant }})
+    needs: [validate-compose, validate-scripts, resolve-versions]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: coolify
+            compose-file: docker-compose.coolify.yml
+          - variant: traefik
+            compose-file: docker-compose.traefik.yml
+    permissions:
+      contents: read
+      packages: read
+    uses: bauer-group/automation-templates/.github/workflows/modules-backup-roundtrip-test.yml@main
+    with:
+      compose-file: ${{ matrix.compose-file }}
+      profiles: 'backup'
+      env-overrides: |
+        STACK_NAME=sonarqube_roundtrip
+      generated-secrets: 'POSTGRES_PASSWORD'
+      build-images: |
+        [
+          {"service": "sonarqube", "context": "src/sonarqube",
+           "build-args": ${{ toJSON(needs.resolve-versions.outputs.build-args) }}},
+          {"service": "sonarqube-backup", "context": "src/sonarqube-backup"}
+        ]
+      backup-service: 'sonarqube-backup'
+      require-components: 'sonar'
+      services-to-stop-before-restore: 'sonarqube'
+      seed-script: 'tests/backup-roundtrip/seed.sh'
+      mutate-script: 'tests/backup-roundtrip/mutate.sh'
+      check-script: 'tests/backup-roundtrip/check.sh'
+      # Both images start as the latest release (vX.Y.Z -> image tag X.Y.Z)
+      # and are upgraded to this commit's builds.
+      upgrade-from: 'latest-release'
+      # A newer SonarQube waits in DB_MIGRATION_NEEDED (unhealthy) until the
+      # operator starts the migration on /setup (docs/upgrade.md). The script
+      # starts a watcher that does that step - at the upgrade and after the
+      # restore of the old snapshot - and nothing else.
+      upgrade-script: 'tests/backup-roundtrip/upgrade.sh'
+      # setting VARIABLE: the .env variables the compose files build the S3
+      # destination from. The engine addresses buckets path-style by default.
+      s3-destination: true
+      s3-env: |
+        endpoint   SONARQUBE_BACKUP_S3_ENDPOINT
+        bucket     SONARQUBE_BACKUP_S3_BUCKET
+        access-key SONARQUBE_BACKUP_S3_ACCESS_KEY
+        secret-key SONARQUBE_BACKUP_S3_SECRET_KEY
+      # PROXY_NETWORK of the Traefik file; the Coolify file declares none.
+      external-networks: 'auto'
+      wait-timeout: 900
+      # free-disk-space stays off: the previous release's images at most
+      # double the fresh gate's 3.8 GB, far below the runner's free disk.
+      # Two boots of SonarQube, and the upgrade and the restart after the
+      # restore may each wait for a database migration.
+      timeout-minutes: 60
+      artifact-name: 'backup-roundtrip-upgrade-${{ matrix.variant }}-diagnostics'
+    secrets: inherit
+
   # ============================================
   # Release Job (only on main branch push)
   # ============================================
 
   release:
     name: 📦 Create Semantic Release
-    needs: [validate-compose, validate-scripts, backup-roundtrip]
+    needs: [validate-compose, validate-scripts, backup-roundtrip, backup-roundtrip-upgrade]
     if: |
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       needs.validate-compose.result == 'success' &&
       needs.validate-scripts.result == 'success' &&
-      needs.backup-roundtrip.result == 'success'
+      needs.backup-roundtrip.result == 'success' &&
+      needs.backup-roundtrip-upgrade.result == 'success'
     uses: bauer-group/automation-templates/.github/workflows/modules-semantic-release.yml@main
     with:
       target-branch: 'main'
