@@ -6,6 +6,18 @@ on every release to `main`.
 
 ## [1.3.18](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.17...v1.3.18) (2026-10-09)
 
+### 🐛 Bug Fixes
+
+* **sonarqube:** installed the bundled plugins on every start ([6e5a461](https://github.com/bauer-group/XPD-SonarQube/commit/6e5a4619471477c3d68969c631e5be845d66e123))
+
+### 🔧 Maintenance
+
+* **deps:** update base image backuphelper [skip ci] ([062a229](https://github.com/bauer-group/XPD-SonarQube/commit/062a2297c5c21b9b9968b7986f7df4793eae3ae4))
+* update Dockerfile version to 1.3.17 ([4b25399](https://github.com/bauer-group/XPD-SonarQube/commit/4b253995b929e54a85bc505045c26d3251da5e9a))
+* update Dockerfile version to 1.3.17 ([b033ec7](https://github.com/bauer-group/XPD-SonarQube/commit/b033ec7e663f75fc8aed5e30d3ae7040a0b2be33))
+
+## [1.3.18](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.17...v1.3.18) (2026-10-09)
+
 ### 🔧 Maintenance
 
 * **deps:** update base image backuphelper [skip ci] ([062a229](https://github.com/bauer-group/XPD-SonarQube/commit/062a2297c5c21b9b9968b7986f7df4793eae3ae4))
