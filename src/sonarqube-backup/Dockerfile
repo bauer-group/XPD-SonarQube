@@ -52,7 +52,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 LABEL org.opencontainers.image.source="https://github.com/bauer-group/XPD-SonarQube"
 LABEL org.opencontainers.image.url="https://github.com/bauer-group/XPD-SonarQube"
 LABEL org.opencontainers.image.documentation="https://github.com/bauer-group/XPD-SonarQube/blob/main/src/sonarqube-backup/README.md"
-LABEL org.opencontainers.image.version="1.3.16"
+LABEL org.opencontainers.image.version="1.3.17"
 LABEL com.bauer-group.image.component="backup"
 LABEL com.bauer-group.image.stack="sonarqube"
 
