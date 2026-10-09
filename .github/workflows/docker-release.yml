@@ -216,10 +216,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - variant: coolify
+          # TEMPORARY verification leg (PR closed unmerged): SonarQube 26.1
+          # as the previous release forces a schema migration to 26.5.
+          - variant: migration-26.1
             compose-file: docker-compose.coolify.yml
-          - variant: traefik
-            compose-file: docker-compose.traefik.yml
+            upgrade-from: '{"sonarqube": "docker.io/library/sonarqube:26.1.0.118079-community", "sonarqube-backup": "latest-release"}'
     permissions:
       contents: read
       packages: read
@@ -244,7 +245,7 @@ jobs:
       check-script: 'tests/backup-roundtrip/check.sh'
       # Both images start as the latest release (vX.Y.Z -> image tag X.Y.Z)
       # and are upgraded to this commit's builds.
-      upgrade-from: 'latest-release'
+      upgrade-from: ${{ matrix.upgrade-from }}
       # A newer SonarQube waits in DB_MIGRATION_NEEDED (unhealthy) until the
       # operator starts the migration on /setup (docs/upgrade.md). The script
       # starts a watcher that does that step - at the upgrade and after the
