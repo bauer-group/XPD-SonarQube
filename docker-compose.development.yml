@@ -176,7 +176,8 @@ services:
               {"type": "postgres", "host": "postgres", "port": 5432,
                "database": "${POSTGRES_DB:-sonar}", "user": "${POSTGRES_USER:-sonar}",
                "password": "$${DB_PASSWORD}", "ssl_mode": "disable",
-               "dump_format": "${SONARQUBE_BACKUP_DUMP_FORMAT:-custom}"}
+               "dump_format": "${SONARQUBE_BACKUP_DUMP_FORMAT:-custom}",
+               "timeout": ${SONARQUBE_BACKUP_DUMP_TIMEOUT_SECONDS:-1800}}
             ],
             "destinations": [
               {"type": "local"},
@@ -194,7 +195,7 @@ services:
             "notifications": {
               "channels": "${SONARQUBE_BACKUP_ALERT_CHANNELS:-}",
               "level": "${SONARQUBE_BACKUP_ALERT_LEVEL:-warnings}",
-              "email": {"host": "${SMTP_HOST:-}", "port": ${SMTP_PORT:-587}, "tls": true,
+              "email": {"host": "${SMTP_HOST:-}", "port": ${SMTP_PORT:-587}, "tls": ${SMTP_TLS:-true},
                         "username": "${SMTP_USERNAME:-}", "password": "$${SMTP_PASSWORD}",
                         "sender": "${SMTP_FROM_EMAIL:-}", "recipients": ["${SONARQUBE_BACKUP_ALERT_EMAIL:-}"]},
               "webhook": {"url": "${SONARQUBE_BACKUP_WEBHOOK_URL:-}", "secret": "$${WEBHOOK_SECRET}"},

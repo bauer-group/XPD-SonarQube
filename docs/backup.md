@@ -13,7 +13,9 @@ its CLI is `backuphelper` (the container's entrypoint).
 One snapshot per run, identified by its timestamp (`YYYY-MM-DD_HH-MM-SS`):
 
 - `<id>.tar.gz` — the `pg_dump` of the `sonar` database (component `sonar`,
-  `custom` format by default, `plain` via `SONARQUBE_BACKUP_DUMP_FORMAT`)
+  `custom` format by default, `plain` via `SONARQUBE_BACKUP_DUMP_FORMAT`;
+  `pg_dump` may run for `SONARQUBE_BACKUP_DUMP_TIMEOUT_SECONDS`, default 1800,
+  1 to 14400)
 - `<id>.manifest.json` — components, sizes and SHA-256 checksums
 
 Snapshots live in the `sonarqube-backup` volume (`/data`) and, if configured, are
@@ -23,9 +25,9 @@ uploaded to an external S3 bucket. Retention keeps the newest
 ## Scheduling
 
 ```ini
-SONARQUBE_BACKUP_SCHEDULE_ENABLED=true
 SONARQUBE_BACKUP_SCHEDULE_MODE=cron          # or "interval"
 SONARQUBE_BACKUP_SCHEDULE_CRON=15 3 * * *    # daily 03:15 (TIME_ZONE)
+SONARQUBE_BACKUP_SCHEDULE_INTERVAL_HOURS=24  # used when MODE=interval
 SONARQUBE_BACKUP_ON_STARTUP=false
 ```
 
@@ -34,6 +36,11 @@ Start the scheduler:
 ```bash
 docker compose -f docker-compose.traefik.yml --profile backup up -d
 ```
+
+The sidecar runs this schedule whenever it is up; there is no switch that keeps
+it up without one. For on-demand backups only, leave the `backup` profile off
+(`COMPOSE_PROFILES` empty, no `--profile backup up`) and use the `run --rm`
+commands below — each starts a one-off sidecar container next to the stack.
 
 ## On-demand operations
 
@@ -113,13 +120,19 @@ that produced it — restore the DB, then start a matching SonarQube image.
 
 ## Alerting
 
+Alerts are off while `SONARQUBE_BACKUP_ALERT_CHANNELS` is empty (the default).
+Naming a channel turns them on:
+
 ```ini
-SONARQUBE_BACKUP_ALERT_ENABLED=true
 SONARQUBE_BACKUP_ALERT_LEVEL=warnings          # errors | warnings | all
 SONARQUBE_BACKUP_ALERT_CHANNELS=email,teams    # email,webhook,teams
 SONARQUBE_BACKUP_ALERT_EMAIL=ops@example.com    # + SMTP_* for the email channel
 SONARQUBE_BACKUP_TEAMS_WEBHOOK=https://...
 ```
+
+The email channel sends through `SMTP_HOST`/`SMTP_PORT` with STARTTLS while
+`SMTP_TLS=true` (the default); `SMTP_TLS=false` sends unencrypted, for a trusted
+relay only. Implicit TLS (SMTPS, port 465) is not supported.
 
 ## Round-trip test in CI
 
