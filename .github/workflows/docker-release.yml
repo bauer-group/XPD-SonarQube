@@ -216,11 +216,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # TEMPORARY verification leg (PR closed unmerged): SonarQube 26.1
-          # as the previous release forces a schema migration to 26.5.
-          - variant: migration-26.1
+          # TEMPORARY verification legs (PR closed unmerged): an older
+          # SonarQube as the previous release forces a schema migration to
+          # 26.5. 26.1 cannot install on PostgreSQL 18 (migration
+          # #202506027 fails), so that leg runs PostgreSQL 17.
+          - variant: migration-26.4
+            compose-file: docker-compose.coolify.yml
+            upgrade-from: '{"sonarqube": "docker.io/library/sonarqube:26.4.0.121862-community", "sonarqube-backup": "latest-release"}'
+            postgres: 18-alpine
+          - variant: migration-26.1-pg17
             compose-file: docker-compose.coolify.yml
             upgrade-from: '{"sonarqube": "docker.io/library/sonarqube:26.1.0.118079-community", "sonarqube-backup": "latest-release"}'
+            postgres: 17-alpine
     permissions:
       contents: read
       packages: read
@@ -230,6 +237,7 @@ jobs:
       profiles: 'backup'
       env-overrides: |
         STACK_NAME=sonarqube_roundtrip
+        POSTGRES_VERSION=${{ matrix.postgres }}
       generated-secrets: 'POSTGRES_PASSWORD'
       build-images: |
         [
