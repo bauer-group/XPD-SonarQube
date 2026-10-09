@@ -134,7 +134,8 @@ services:
     volumes:
       - sonarqube-data:/opt/sonarqube/data
       - sonarqube-logs:/opt/sonarqube/logs
-      # /opt/sonarqube/extensions intentionally NOT a volume (plugin baked in).
+      # No volume for /opt/sonarqube/extensions: the image installs its bundled
+      # plugins there on every start (see src/sonarqube/entrypoint.sh).
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status 2>/dev/null | grep -q '\"status\":\"UP\"'"]
       interval: 30s

@@ -8,8 +8,9 @@ to add branch and pull-request analysis.
 ## How it is wired (auto-resolved, no manual pin)
 
 - The plugin JAR is **baked into the wrapper image** at
-  `/opt/sonarqube/extensions/plugins/` (see `src/sonarqube/Dockerfile`), not
-  installed via the Marketplace.
+  `/opt/sonarqube/bundled-plugins/` (see `src/sonarqube/Dockerfile`), not
+  installed via the Marketplace. The image's entrypoint installs it into
+  `/opt/sonarqube/extensions/plugins/` on every start.
 - The Dockerfile **resolves the plugin at build time** from the base image's own
   `$SONAR_VERSION` (plugin tag = `<MAJOR>.<MINOR>.0`) and stores it under a
   version-less filename. So the `-javaagent` options are static image-level `ENV`
@@ -20,9 +21,12 @@ to add branch and pull-request analysis.
   SONAR_CE_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin.jar=ce
   ```
 
-- Because the plugin is in the image layer, `/opt/sonarqube/extensions` is
-  **deliberately not a named volume** — a volume would shadow the plugin after an
-  image upgrade and silently pin an old version.
+- `/opt/sonarqube/extensions` is **deliberately not a named volume**. The
+  upstream image still declares it a volume, and `docker compose up` hands the
+  old container's anonymous volume to the new one on an upgrade, with the
+  previous version of the plugin in it. The entrypoint therefore replaces every
+  version of the bundled plugins there before SonarQube starts, so an upgrade
+  always runs the plugin of the new image.
 
 ## Version locking — handled automatically ⚙
 
