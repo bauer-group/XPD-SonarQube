@@ -12,13 +12,14 @@ to add branch and pull-request analysis.
   installed via the Marketplace. The image's entrypoint installs it into
   `/opt/sonarqube/extensions/plugins/` on every start.
 - The Dockerfile **resolves the plugin at build time** from the base image's own
-  `$SONAR_VERSION` (plugin tag = `<MAJOR>.<MINOR>.0`) and stores it under a
-  version-less filename. So the `-javaagent` options are static image-level `ENV`
-  and never drift from the bundled JAR:
+  `$SONAR_VERSION` (plugin tag = `<MAJOR>.<MINOR>.0`) and keeps the release's
+  file name, `sonarqube-community-branch-plugin-<version>.jar`. The `-javaagent`
+  options are image-level `ENV` built from the same `BRANCH_PLUGIN_VERSION`
+  build argument, so they never drift from the bundled JAR:
 
   ```text
-  SONAR_WEB_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin.jar=web
-  SONAR_CE_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin.jar=ce
+  SONAR_WEB_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-<version>.jar=web
+  SONAR_CE_JAVAADDITIONALOPTS=-javaagent:./extensions/plugins/sonarqube-community-branch-plugin-<version>.jar=ce
   ```
 
 - `/opt/sonarqube/extensions` is **deliberately not a named volume**. The
