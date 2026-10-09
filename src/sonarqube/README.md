@@ -3,7 +3,8 @@
 Thin wrapper around the upstream [`sonarqube`](https://hub.docker.com/_/sonarqube)
 Community Build image with the
 [Community Branch Plugin](https://github.com/mc1arke/sonarqube-community-branch-plugin)
-baked into `/opt/sonarqube/extensions/plugins/`.
+baked in: the image keeps it in `/opt/sonarqube/bundled-plugins/` and its
+entrypoint installs it into `/opt/sonarqube/extensions/plugins/` on every start.
 
 Published as `ghcr.io/bauer-group/xpd-sonarqube/sonarqube`.
 
@@ -11,7 +12,12 @@ Published as `ghcr.io/bauer-group/xpd-sonarqube/sonarqube`.
 
 * **Reproducible branch analysis.** The branch plugin is version-locked to
   SonarQube. Baking it into the image layer means a rebuild upgrades the plugin
-  atomically — a stale `extensions/` volume can never shadow it.
+  atomically. The upstream image declares `/opt/sonarqube/extensions` a volume,
+  and `docker compose up` carries that anonymous volume over to the recreated
+  container on an upgrade — so the entrypoint (`entrypoint.sh`) replaces every
+  version of the bundled plugins there with the image's own before SonarQube
+  starts. Without it, the first plugin bump would leave the previous version in
+  place and SonarQube would not start.
 * **Sovereign re-publish.** The stack keeps working from our own registry even
   if upstream tags move.
 
@@ -43,7 +49,7 @@ and the `-javaagent` `ENV` references that exact name.
 docker build -t sonarqube-bauer:test ./src/sonarqube
 
 docker run --rm --entrypoint sh sonarqube-bauer:test \
-  -c 'ls -l /opt/sonarqube/extensions/plugins/ && echo "$SONAR_WEB_JAVAADDITIONALOPTS"'
+  -c 'ls -l /opt/sonarqube/bundled-plugins/ && echo "$SONAR_WEB_JAVAADDITIONALOPTS"'
 ```
 
 ## License

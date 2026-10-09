@@ -25,8 +25,8 @@
 #
 # Notes:
 #   - SonarQube embeds Elasticsearch → needs vm.max_map_count + high ulimits.
-#   - The Community Branch Plugin is baked into the wrapper image; do NOT mount
-#     a volume over /opt/sonarqube/extensions (it would shadow the plugin).
+#   - The Community Branch Plugin is baked into the wrapper image, which
+#     installs it into /opt/sonarqube/extensions on every start.
 # =============================================================================
 
 
@@ -161,9 +161,10 @@ services:
     volumes:
       - sonarqube-data:/opt/sonarqube/data
       - sonarqube-logs:/opt/sonarqube/logs
-      # NB: /opt/sonarqube/extensions is intentionally NOT a volume — plugins
-      # are baked into the wrapper image. A volume here would shadow the branch
-      # plugin after an image upgrade (see src/sonarqube/Dockerfile).
+      # NB: no volume for /opt/sonarqube/extensions — the wrapper image installs
+      # its bundled plugins there on every start, replacing older versions that
+      # the previous container's anonymous volume carries over on an upgrade
+      # (see src/sonarqube/entrypoint.sh).
     expose:
       - 9000/tcp
     healthcheck:

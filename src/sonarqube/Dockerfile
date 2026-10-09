@@ -68,11 +68,16 @@ FROM sonarqube:${SONARQUBE_VERSION}
 ARG SONARQUBE_VERSION
 ARG BRANCH_PLUGIN_VERSION
 
-# Bring the verified plugin(s) into the extensions dir. The upstream image runs
-# as uid 1000 with primary group root (gid 0, the OpenShift "arbitrary UID"
-# pattern) — there is no `sonarqube` group, so own it sonarqube:0. The /plugins
-# dir holds the branch plugin (always) and the OIDC plugin (when opted in).
-COPY --from=plugin --chown=sonarqube:0 /plugins/ /opt/sonarqube/extensions/plugins/
+# Keep the verified plugin(s) OUTSIDE the extensions dir: upstream declares
+# /opt/sonarqube/extensions a VOLUME, and Compose hands that anonymous volume
+# from the old container to the new one on an image upgrade, so plugins baked
+# into it would be shadowed by the previous image's. entrypoint.sh installs
+# these into extensions/plugins on every start, replacing every version of
+# them there. The /plugins dir holds the branch plugin (always) and the OIDC
+# plugin (when opted in); root-owned and read-only for the sonarqube user.
+COPY --from=plugin /plugins/ /opt/sonarqube/bundled-plugins/
+COPY --chmod=555 entrypoint.sh /opt/sonarqube/docker/bundled-plugins-entrypoint.sh
+ENTRYPOINT ["/opt/sonarqube/docker/bundled-plugins-entrypoint.sh"]
 
 # Activate the plugin as a -javaagent in BOTH the Web and Compute Engine JVMs.
 # Baked into image ENV so they always match the bundled JAR. Keep separate from
@@ -103,4 +108,5 @@ LABEL org.opencontainers.image.version="1.3.17" \
       com.bauer-group.branch-plugin.version="${BRANCH_PLUGIN_VERSION}"
 
 
-# Inherit ENTRYPOINT, CMD, EXPOSE, HEALTHCHECK, USER (sonarqube), WORKDIR from upstream.
+# Inherit CMD (none), EXPOSE, STOPSIGNAL, USER (sonarqube), WORKDIR from upstream;
+# the ENTRYPOINT above hands over to upstream's /opt/sonarqube/docker/entrypoint.sh.
