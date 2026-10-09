@@ -73,7 +73,7 @@ docker compose -f docker-compose.traefik.yml up -d
 ├── scripts/generate-env.py          # secret generator (stdlib, cross-platform)
 ├── src/
 │   ├── sonarqube/                   # wrapper image: Community Build + branch plugin
-│   └── sonarqube-backup/            # backup sidecar: BackupHelper meta image + restore hook
+│   └── sonarqube-backup/            # backup sidecar: BackupHelper meta image + restore hooks
 ├── tests/backup-roundtrip/          # seed/mutate/check scripts of the CI backup round trip
 ├── docs/                            # installation, reverse-proxy, branch-analysis, backup, upgrade
 └── .github/                         # CI/CD: release, docker build, dependabot, monitors

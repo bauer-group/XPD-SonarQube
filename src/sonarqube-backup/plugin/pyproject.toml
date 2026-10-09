@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "backuphelper-sonarqube"
 version = "0.1.0"
-description = "SonarQube restore hook (drops the search indexes) for the BAUER GROUP BackupHelper engine"
+description = "SonarQube restore hooks (refuse while SonarQube runs, drop the search indexes) for the BAUER GROUP BackupHelper engine"
 requires-python = ">=3.14"
 license = "MIT"
 authors = [{ name = "BAUER GROUP" }]
@@ -18,7 +18,8 @@ test = ["pytest"]
 [project.urls]
 Homepage = "https://github.com/bauer-group/XPD-SonarQube"
 
-# The engine calls register(registry) to add the post_restore index drop.
+# The engine calls register(registry) to add the pre_restore gate and the
+# post_restore index drop.
 [project.entry-points."backuphelper.hooks"]
 sonarqube = "sonarqube_backup_ext.hooks:register"
 
