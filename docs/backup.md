@@ -82,6 +82,13 @@ docker compose -f docker-compose.traefik.yml --profile backup run --rm sonarqube
 docker compose -f docker-compose.traefik.yml up -d sonarqube
 ```
 
+**SonarQube must be stopped.** `restore` refuses to run while SonarQube is up
+and ends with *"SonarQube is still running … Restore aborted, the database was
+not touched"* (exit code 1). The sidecar checks the lock that SonarQube's
+embedded Elasticsearch holds on `es8/node.lock` in the `sonarqube-data` volume
+for as long as it runs; once `docker compose stop sonarqube` has returned, the
+lock is gone and the restore goes ahead. Run step 2, then repeat step 3.
+
 **Search indexes.** SonarQube keeps its search indexes (Projects page, issues,
 rules) in Elasticsearch below `/opt/sonarqube/data/es8` and only rebuilds an
 index that is missing. After a database restore the old indexes would still show
@@ -130,14 +137,16 @@ engine image, so neither ships before it restored SonarQube data.
 | Start | `docker-compose.coolify.yml` with the `backup` profile and a generated `POSTGRES_PASSWORD` |
 | Seed | Through the SonarQube web API: a project whose key and name are the run's marker |
 | Back up | `create`, then `show` must list `sonar` without errors or warnings, `verify` must report `OK` |
-| Delete | The project, through the web API |
+| Delete | The project, through the web API. Then a `restore <id> --force` while SonarQube still runs must be refused for that reason |
 | Restore | `sonarqube` is stopped, `restore <id> --force` runs (database and index drop), the stack is started again |
 | Check | The project in the `projects` table, in `api/projects/search` (reads the database) and on the Projects page, `api/components/search_projects` (reads the search index) |
 
 The scripts live in [`tests/backup-roundtrip/`](../tests/backup-roundtrip/). The
 check runs three times — before the backup (present), after the deletion (absent)
 and after the restore (present) — so a restore that writes nothing cannot pass.
-The search index check is the one that caught stale indexes after a restore.
+The check after the deletion also proves that the refused restore left the
+database alone. The search index check is the one that caught stale indexes
+after a restore.
 
 A run takes about 3 minutes (2 min 43 s measured): about 40 s to build both
 images, 45 to 50 s for the first boot, 30 to 40 s for the restart with the full
