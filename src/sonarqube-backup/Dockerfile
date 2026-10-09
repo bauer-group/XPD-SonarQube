@@ -2,15 +2,16 @@
 # SonarQube Database Backup — meta image on the central BackupHelper engine
 # =============================================================================
 # Thin wrapper: FROM the central BackupHelper engine + SonarQube-specific OCI
-# labels + one restore hook. All backup logic (pg_dump, retention, manifest, S3,
+# labels + two restore hooks. All backup logic (pg_dump, retention, manifest, S3,
 # notifications, restore CLI) lives in ghcr.io/bauer-group/cs-backuphelper/backuphelper,
 # which already ships the postgres/mariadb clients, a non-root user, tini and a
 # functional healthcheck. See docs/migration.md in that repo.
 #
 # The SonarQube-specific part is the `sonarqube_backup_ext` plugin (./plugin):
-# a post_restore hook that drops SonarQube's search indexes (data/es8) after a
+# a pre_restore gate that refuses to restore while SonarQube still runs, and a
+# post_restore hook that drops SonarQube's search indexes (data/es8) after a
 # database restore, so SonarQube rebuilds them from the restored database. The
-# engine discovers it via the backuphelper.hooks entry point.
+# engine discovers both via the backuphelper.hooks entry point.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
