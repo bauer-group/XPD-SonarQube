@@ -28,9 +28,11 @@ if OUTPUT=$(docker compose exec -T "$ROUNDTRIP_BACKUP_SERVICE" \
   exit 1
 fi
 printf '%s\n' "$OUTPUT" | sed 's/^/  | /'
-# The traceback renderer may wrap the message across lines.
+# Match the raised exception itself: the traceback also prints the hook's
+# source around the failing line, which contains the same text, and it may
+# wrap the message across lines.
 FLAT=$(tr -s '[:space:]' ' ' <<< "$OUTPUT")
-if [[ "$FLAT" != *"SonarQube is still running"* ]]; then
+if [[ "$FLAT" != *"RuntimeError: SonarQube is still running"* ]]; then
   echo "FAIL restore failed, but not because SonarQube was running (output above)" >&2
   exit 1
 fi
