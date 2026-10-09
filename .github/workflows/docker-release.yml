@@ -95,15 +95,21 @@ jobs:
           # ${{ github.* }} into the script body (GitHub Actions script injection).
           REF: ${{ github.ref_name }}
           EVENT_NAME: ${{ github.event_name }}
+          # This job gates every release (backup-roundtrip needs it). Without a
+          # token the GitHub API allows 60 requests per hour per IP, shared by
+          # everything else on the hosted runner's IP; gh authenticates with
+          # this token instead (1,000 requests per hour for the repository).
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           # Defense-in-depth: refuse an unexpected ref name before using it.
           case "$REF" in
             *[!A-Za-z0-9._/-]*) echo "::error::unexpected ref name: $REF"; exit 1 ;;
           esac
-          plugin="$(curl -fsSL https://api.github.com/repos/mc1arke/sonarqube-community-branch-plugin/releases/latest | jq -r '.tag_name')"
+          plugin="$(gh api repos/mc1arke/sonarqube-community-branch-plugin/releases/latest --jq '.tag_name')"
           minor="$(printf '%s' "$plugin" | cut -d. -f1-2)"
-          sq="$(curl -fsSL "https://hub.docker.com/v2/repositories/library/sonarqube/tags?page_size=100&name=${minor}." \
+          # Docker Hub has no token here: --retry rides out a 429 or 5xx.
+          sq="$(curl -fsSL --retry 3 "https://hub.docker.com/v2/repositories/library/sonarqube/tags?page_size=100&name=${minor}." \
                 | jq -r '.results[].name' \
                 | grep -E "^${minor}\.[0-9.]+-community$" | sort -V | tail -1)"
           if [ -z "$plugin" ] || [ -z "$sq" ]; then
