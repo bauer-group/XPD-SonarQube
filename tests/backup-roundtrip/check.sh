@@ -23,6 +23,10 @@ case "${ROUNDTRIP_EXPECT:?set by the round-trip module}" in
 esac
 FAILED=0
 
+# Which SonarQube answers: the previous release's before an upgrade, this
+# commit's after it.
+echo "SonarQube $(sonar_api GET /api/server/version)"
+
 expect_count() {
   local what="$1" got="$2"
   if [ "$got" = "$WANT" ]; then
