@@ -9,7 +9,7 @@ numbers to bump by hand.
 | --- | --- |
 | **CI resolver** (`resolve-versions` in `docker-release.yml`) | On every build, takes the latest Community Branch Plugin release, picks the newest matching `…-community` SonarQube tag, builds and tests with that pair and — once the backup round trips passed with it — **commits it back into the Dockerfile's `ARG` lines** (`pin-versions`, main only), so the Dockerfile is always the current, reproducible source of truth (published == Dockerfile). |
 | **Base-image monitor** (`check-base-images.yml`, daily) | Watches the floating tags (`sonarqube:community`, `ghcr.io/bauer-group/cs-backuphelper/backuphelper:latest`, `postgres:18-alpine`, `busybox:stable`) for digest drift and triggers a rebuild/release when upstream moves. |
-| **Dependabot** (weekly) | Bumps the base tags inside the Dockerfiles, the compose image tags and the GitHub Actions versions; the `docker-maintenance` workflow auto-merges its PRs once their checks pass. |
+| **Dependabot** (weekly) | Bumps the base tags inside the Dockerfiles, the compose image tags and the GitHub Actions versions; the `docker-maintenance` workflow auto-merges its patch updates (not GitHub Actions) once `docker-release.yml` passed on the PR, then dispatches `docker-release.yml` on main, which tests the merged commit again and releases it (`fix(docker)` → PATCH). |
 | **`docker compose pull`** | Brings the host's pulled images (postgres, busybox, the wrapper images) up to the latest digest of their floating tags. |
 
 So a routine "upgrade" is just: let CI/Dependabot do their thing, then on the
