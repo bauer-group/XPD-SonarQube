@@ -4,6 +4,14 @@ All notable changes to this project are documented here. This file is maintained
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 on every release to `main`.
 
+## [1.3.20](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.19...v1.3.20) (2026-10-13)
+
+### 🔧 Maintenance
+
+* **deps:** update base image sonarqube [skip ci] ([0a5be16](https://github.com/bauer-group/XPD-SonarQube/commit/0a5be16a54cfb556e0dec27dbbb9e7307b460b05))
+* update Dockerfile version to 1.3.19 ([f24cdc3](https://github.com/bauer-group/XPD-SonarQube/commit/f24cdc35a0c2d6c285cdbf4d8fecfe969e400854))
+* update Dockerfile version to 1.3.19 ([1cdf499](https://github.com/bauer-group/XPD-SonarQube/commit/1cdf4997f22fa1555ebb9a226b5494254840a57c))
+
 ## [1.3.19](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.18...v1.3.19) (2026-10-10)
 
 ### 🔧 Maintenance
