@@ -72,7 +72,9 @@ SONARQUBE_BACKUP_S3_PREFIX=sonarqube/
 
 ## Restore (disaster recovery)
 
-> **Destructive.** `restore` drops & recreates objects in the target database.
+> **Destructive.** `restore` drops & recreates objects in the target database;
+> objects in `public` the snapshot does not contain are dropped too
+> ([over a newer version](#restoring-over-a-newer-sonarqube-version)).
 > It refuses to run if the archive fails its SHA-256 integrity check.
 
 ```bash
@@ -115,8 +117,95 @@ docker compose -f docker-compose.traefik.yml run --rm --no-deps --entrypoint sh 
   -c 'rm -rf /opt/sonarqube/data/es8/*'
 ```
 
-A SonarQube database restore must target the **same SonarQube major version**
-that produced it — restore the DB, then start a matching SonarQube image.
+**Which SonarQube to start.** Start the release that ran when the snapshot was
+taken, or a newer one within SonarQube's upgrade path, which finds the older
+schema and asks for the migration on `/setup`
+([upgrade.md](upgrade.md#sonarqube-database-migrations)) — never an older one:
+SonarQube refuses to start on a schema newer than itself. To start that very
+release, pin `SONARQUBE_VERSION` to its image tag.
+
+**`plain` snapshots.** Only `custom` snapshots (the default) are compared with
+the database and replace what is there. A `plain` snapshot
+(`SONARQUBE_BACKUP_DUMP_FORMAT=plain`) is replayed through `psql` without
+dropping anything and stops at the first *"already exists"*, so it cannot be
+restored over the existing database — neither in place nor to roll back an
+upgrade. Restore it into an empty database, or keep
+`SONARQUBE_BACKUP_DUMP_FORMAT=custom`.
+
+If `restore` ends with *"postgres restore refused: none of the … relation(s) of
+schema(s) public in the target database is in sonar.dump"*, the database shares
+no table with the snapshot — most likely the stack's postgres volume
+(`<STACK_NAME>-postgres`) holds another application's database; check
+`STACK_NAME`. The database was not changed; the search indexes are dropped all
+the same, and SonarQube rebuilds them on its next start. Restore into an empty
+database instead.
+
+### Restoring over a newer SonarQube version
+
+A `custom` snapshot can be restored over a database that a newer SonarQube
+migrated after the snapshot — the way back from an upgrade
+([upgrade.md](upgrade.md#sonarqube-database-migrations)). `restore` compares the
+database with the snapshot first. When `public` holds a table or other object
+the snapshot does not contain, it replaces all of `public` in **one**
+transaction: it drops every table there, the ones the newer version added
+included, and replays the snapshot. Any error rolls everything back. The log
+shows the path and, after the commit, what does not come back:
+
+```text
+restoring sonar.dump by replacing the … relation(s) of schema(s) public in one transaction
+not in the snapshot, dropped: public.…
+```
+
+Without such a difference (the snapshot's own tables with changed rows, or an
+empty database) it is the plain `pg_restore` as before. Afterwards start the
+release that ran when the snapshot was taken (pin `SONARQUBE_VERSION`, see
+[upgrade.md](upgrade.md#sonarqube-database-migrations)); a newer one finds the
+snapshot's schema and asks for the migration on `/setup` again.
+
+**Sidecar version.** This needs a sidecar on BackupHelper engine 1.10.2 or
+later — sidecar release 1.3.21 and later, which `SONARQUBE_BACKUP_VERSION=latest`
+(the default) pulls. With an older one such a restore ends with *"cannot drop …
+because other objects depend on it"* and rolls back, or leaves the tables the
+newer version added behind. Functions, procedures and aggregates the snapshot
+does not contain are compared and dropped from engine 1.10.4 on; older engines
+leave them in place.
+
+**Own objects are dropped.** The comparison does not tell SonarQube's tables
+from yours: a view, table or function you added to `public` of the `sonar`
+database after the snapshot (a reporting view, a helper table) is dropped as
+well, and so is anything elsewhere that depends on a dropped object, such as a
+view on SonarQube's tables in another schema. `not in the snapshot, dropped: …`
+lists what does not come back from `public`; a dependent object outside
+`public` shows up only among psql's `drop cascades to …` notices in the log,
+which also name objects the snapshot recreates right after. Keep such objects
+in a separate database, or create them again after the restore.
+
+**Temporary space.** On this path the sidecar first writes the whole database as
+uncompressed SQL into its temporary directory, next to the extracted snapshot:
+plan about **two to three times the snapshot size** free, more with large binary
+columns such as SonarQube's stored source files. That directory is `/tmp` of the
+one-off `sonarqube-backup` container; the compose files give it no `tmpfs`, so
+it lives on the disk of Docker's data root — as, by default, does the
+`sonarqube-backup` volume, so `TMPDIR=/data/tmp` gains nothing there. If that
+disk is short, mount a directory with room on another disk into the restore run
+and point `TMPDIR` at it. Create the directory first and give it to uid 1000,
+the sidecar's user: Docker would create a missing one owned by root, and when
+`TMPDIR` is not writable, the engine uses `/tmp` without an error.
+
+```bash
+sudo mkdir -p /mnt/scratch/sonarqube-restore
+sudo chown 1000:1000 /mnt/scratch/sonarqube-restore
+docker compose -f docker-compose.traefik.yml --profile backup run --rm \
+  -v /mnt/scratch/sonarqube-restore:/restore-tmp -e TMPDIR=/restore-tmp \
+  sonarqube-backup restore 2026-06-17_03-15-00 --force
+```
+
+**Database disk.** A restore over an existing database runs in one transaction,
+and PostgreSQL frees the files of the dropped tables only at its commit. Until
+then the `postgres` volume holds the old and the restored database side by
+side, plus WAL: plan about the database's size free there as well — with the
+compose defaults on the same Docker disk as the temporary files, so on top of
+them. `TMPDIR` on another disk does not free this space.
 
 ## Alerting
 
@@ -188,7 +277,8 @@ production gets there, once with `docker-compose.coolify.yml` and once with
 latest release runs, the new SonarQube finds an older schema and waits in
 `DB_MIGRATION_NEEDED` — not `UP`, so not healthy — until someone starts the
 migration on `/setup` ([upgrade.md](upgrade.md#sonarqube-database-migrations)).
-The restore puts that older schema back, so it asks again after the restore.
+The restore puts that older schema back, dropping the tables the newer version
+added, so it asks again after the restore.
 [`migrate-db.sh`](../tests/backup-roundtrip/migrate-db.sh), which `upgrade.sh`
 starts in the background, is that operator: whenever SonarQube reports
 `DB_MIGRATION_NEEDED`, it calls `POST api/system/migrate_db`, the call `/setup`

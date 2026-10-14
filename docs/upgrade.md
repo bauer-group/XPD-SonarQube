@@ -36,6 +36,14 @@ SonarQube applies DB migrations on startup. When a new build includes a
 migration:
 
 1. **Back up the database first** (`--now`, then `verify`) — see [backup.md](backup.md).
+   Note the release that runs, for a rollback (the image tag `X.Y.Z` it was
+   built as):
+
+   ```bash
+   docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' \
+     "$(docker compose -f docker-compose.traefik.yml ps -q sonarqube)"
+   ```
+
 2. `docker compose -f docker-compose.traefik.yml pull && up -d`.
 3. If a migration is required, SonarQube shows a maintenance page — open
    `https://${SONARQUBE_HOSTNAME}/setup` and trigger the upgrade. A release that moves
@@ -44,6 +52,27 @@ migration:
    [backup.md](backup.md#upgrade-off-site-copy-and-compose-variants)).
 4. Do not skip more than one LTA/major at a time; follow SonarQube's official
    upgrade path for large jumps.
+
+**Rolling back.** To return to the release before, restore the snapshot from
+step 1 over the migrated database. Everything since that snapshot is lost:
+analyses, projects and settings changed after it do not come back.
+
+1. `docker compose -f docker-compose.traefik.yml stop sonarqube`.
+2. `verify` the snapshot, then `restore <id> --force` it with the commands in
+   [backup.md](backup.md#restore-disaster-recovery). It needs a `custom`
+   snapshot (the default) and a sidecar from release 1.3.21 on
+   ([why](backup.md#restoring-over-a-newer-sonarqube-version)). The restore
+   drops the tables the newer SonarQube added, logged as
+   `not in the snapshot, dropped: …`, and the search indexes; plan free disk
+   space of two to three times the snapshot for its temporary files, and about
+   the database's size on the `postgres` volume.
+3. Pin `SONARQUBE_VERSION` in `.env` to the release noted in step 1 (image tag
+   `X.Y.Z` of release `vX.Y.Z`), then
+   `docker compose -f docker-compose.traefik.yml up -d sonarqube`. Set it back
+   to `latest` once a release fixes the problem. Without the note, the
+   [release list](https://github.com/bauer-group/XPD-SonarQube/releases) shows
+   which release was the newest when the snapshot was taken — the one that ran,
+   if the host had pulled it.
 
 > Only one SonarQube instance may use a database schema at a time. Never run two
 > instances against the same database.
