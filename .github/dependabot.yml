@@ -10,6 +10,13 @@
 # the central BackupHelper engine image, whose dependencies are maintained in
 # that repository.
 #
+# Commit prefixes decide what a merged update releases (semantic-release):
+#   docker, docker-compose  fix(docker) - the images and the compose files
+#                           operators run; a merge cuts a PATCH release
+#   github-actions          chore(ci)   - CI only, no release (and never
+#                           merged automatically)
+# docker-maintenance.yml merges tested patch updates and dispatches the release.
+#
 # Pure digest drift on existing floating tags is handled by check-base-images.yml
 # (daily cron). The SonarQube ↔ branch-plugin version pair is resolved by the
 # resolve-versions job of docker-release.yml on every build (see
@@ -46,7 +53,7 @@ updates:
       - "docker"
       - "dependabot"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "fix(docker)"
 
   # sonarqube wrapper base image (sonarqube:<ver>-community in src/sonarqube/Dockerfile)
   - package-ecosystem: "docker"
@@ -61,7 +68,7 @@ updates:
       - "docker"
       - "dependabot"
     commit-message:
-      prefix: "chore(docker)"
+      prefix: "fix(docker)"
 
   # sonarqube-backup base image (FROM the central BackupHelper image in src/sonarqube-backup/Dockerfile)
   - package-ecosystem: "docker"
@@ -76,4 +83,4 @@ updates:
       - "docker"
       - "dependabot"
     commit-message:
-      prefix: "chore(docker)"
+      prefix: "fix(docker)"
