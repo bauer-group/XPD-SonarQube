@@ -37,9 +37,10 @@ tag often runs ahead of the plugin, so this stack **floats on the plugin** and
 matches SonarQube to it — there is nothing to pin by hand:
 
 - The CI `resolve-versions` job takes the **latest branch-plugin release**, picks
-  the newest SonarQube `<MAJOR.MINOR>.*-community` tag, builds with that pair and
-  **commits it back into the Dockerfile `ARG` lines** — the Dockerfile stays the
-  single, always-current source of truth.
+  the newest SonarQube `<MAJOR.MINOR>.*-community` tag and builds with that pair;
+  once the backup round trips passed with it, `pin-versions` **commits it back
+  into the Dockerfile `ARG` lines** — the Dockerfile stays the single,
+  always-current source of truth.
 - The base-image monitor watches the floating `sonarqube:community` tag and
   triggers a rebuild (re-resolve) on upstream drift.
 - During the short window after a brand-new SonarQube release but before the

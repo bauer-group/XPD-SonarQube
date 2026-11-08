@@ -1,12 +1,17 @@
 # =============================================================================
-# Dependabot Maintenance — Auto-merge tested Dependabot PRs
+# Dependabot Maintenance — Auto-merge tested Dependabot PRs, then release
 # =============================================================================
 # Auto-approves and squash-merges a Dependabot patch update — base-image bumps
 # (Dockerfiles) and docker-compose image tags — once docker-release.yml (image
-# builds and the backup round trip) has passed on the PR head commit and no
+# builds and the backup round trips) has passed on the PR head commit and no
 # other check failed. Minor and major updates stay open for review, and so do
 # GitHub Action version bumps: they change the CI itself, so no CI run can
 # vouch for them.
+#
+# A merge made with the GITHUB_TOKEN starts no push run, so after a merge the
+# module dispatches docker-release.yml on main (release-workflow) and waits
+# for it: it builds and tests the merged commit again and releases only that
+# commit. A release run that does not succeed turns this job red.
 # =============================================================================
 
 name: 🔧 Dependabot Maintenance
@@ -16,8 +21,11 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write       # merge
+  pull-requests: write  # approve, read the PR
+  checks: read          # check runs and suites
+  statuses: read        # commit statuses
+  actions: write        # dispatch the release; read workflow runs
 
 jobs:
   maintenance:
@@ -27,6 +35,8 @@ jobs:
       merge-method: 'squash'
       auto-approve: true
       # Merge only after this PR CI has passed on the PR head commit - it
-      # builds the images and runs the backup round trip.
+      # builds the images and runs the backup round trips.
       required-workflows: '.github/workflows/docker-release.yml'
+      # Release the merged update: dispatched on main after the merge.
+      release-workflow: '.github/workflows/docker-release.yml'
     secrets: inherit

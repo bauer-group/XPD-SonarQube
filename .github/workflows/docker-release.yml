@@ -37,10 +37,13 @@ permissions:
 
 # Serialize release runs on a branch so concurrent runs never race on the
 # semantic-release git push (the "rejected push loop"). Queue, never cancel —
-# an in-flight publish must finish.
+# an in-flight publish must finish, and a waiting run (e.g. the release the
+# Dependabot maintenance dispatched and waits for) must not be replaced by a
+# newer one: queue: max keeps up to 100 pending runs instead of only one.
 concurrency:
   group: docker-release-${{ github.ref }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   # ============================================
@@ -72,29 +75,21 @@ jobs:
   # build green and always on the newest WORKING pair — no manual pinning.
 
   resolve-versions:
-    name: 🧭 Resolve & pin SonarQube + plugin pair
+    name: 🧭 Resolve SonarQube + plugin pair
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Read-only: it only asks GitHub and Docker Hub. The pair is written into
+    # the Dockerfile by pin-versions, once the round trips passed with it.
     permissions:
-      contents: write
+      contents: read
     outputs:
       build-args: ${{ steps.r.outputs.build-args }}
+      sonarqube-version: ${{ steps.r.outputs.sonarqube-version }}
+      plugin-version: ${{ steps.r.outputs.plugin-version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          # The branch, so the commit-back below can push to it. A PR's ref
-          # name (<n>/merge) is no branch; an empty ref checks out the PR's
-          # merge commit, and PRs never commit back.
-          ref: ${{ github.event_name != 'pull_request' && github.ref_name || '' }}
-          token: ${{ secrets.GITHUB_TOKEN }}
       - id: r
         shell: bash
         env:
-          # Pass context values through the environment — never interpolate
-          # ${{ github.* }} into the script body (GitHub Actions script injection).
-          REF: ${{ github.ref_name }}
-          EVENT_NAME: ${{ github.event_name }}
           # This job gates every release (backup-roundtrip needs it). Without a
           # token the GitHub API allows 60 requests per hour per IP, shared by
           # everything else on the hosted runner's IP; gh authenticates with
@@ -102,10 +97,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Defense-in-depth: refuse an unexpected ref name before using it.
-          case "$REF" in
-            *[!A-Za-z0-9._/-]*) echo "::error::unexpected ref name: $REF"; exit 1 ;;
-          esac
           plugin="$(gh api repos/mc1arke/sonarqube-community-branch-plugin/releases/latest --jq '.tag_name')"
           minor="$(printf '%s' "$plugin" | cut -d. -f1-2)"
           # Docker Hub has no token here: --retry rides out a 429 or 5xx.
@@ -118,38 +109,17 @@ jobs:
           fi
           echo "Resolved pair: SonarQube=${sq}  branch-plugin=${plugin}"
 
-          # The build still receives the pair as build-args (the build job checks
-          # out the trigger commit, before the commit-back below lands).
-          # docker/build-push-action expects newline-separated KEY=VALUE pairs.
+          # Every build and test of this run checks out the trigger commit and
+          # receives the pair as build-args. docker/build-push-action expects
+          # newline-separated KEY=VALUE pairs.
           {
             echo "build-args<<__ARGS__"
             echo "SONARQUBE_VERSION=${sq}"
             echo "BRANCH_PLUGIN_VERSION=${plugin}"
             echo "__ARGS__"
+            echo "sonarqube-version=${sq}"
+            echo "plugin-version=${plugin}"
           } >> "$GITHUB_OUTPUT"
-
-          # ── Commit the resolved pair BACK into the Dockerfile ARGs ──────────
-          # Keeps the Dockerfile the single source of truth: published == file.
-          # Skipped on PRs. GITHUB_TOKEN pushes do NOT re-trigger workflows, so
-          # this never loops; the rebase-retry guards against a concurrent push.
-          if [ "$EVENT_NAME" = "pull_request" ]; then exit 0; fi
-          df="src/sonarqube/Dockerfile"
-          sed -i -E "s|^(ARG SONARQUBE_VERSION=).*|\1${sq}|" "$df"
-          sed -i -E "s|^(ARG BRANCH_PLUGIN_VERSION=).*|\1${plugin}|" "$df"
-          if git diff --quiet -- "$df"; then
-            echo "Dockerfile already at the resolved pair — nothing to commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$df"
-          git commit -m "chore: pinned SonarQube ${sq} + branch-plugin ${plugin} [skip ci]"
-          for attempt in 1 2 3; do
-            if git push; then echo "pushed"; break; fi
-            echo "push rejected — rebasing (attempt ${attempt})…"
-            git pull --rebase --autostash origin "$REF"
-            sleep 3
-          done
 
   # ============================================
   # Backup round trip (gates every release)
@@ -270,21 +240,100 @@ jobs:
     secrets: inherit
 
   # ============================================
-  # Release Job (only on main branch push)
+  # Pin the tested pair into the Dockerfile (main only)
   # ============================================
-
-  release:
-    name: 📦 Create Semantic Release
-    needs: [validate-compose, validate-scripts, backup-roundtrip, backup-roundtrip-upgrade]
+  # Keeps the Dockerfile the single source of truth (published == file), and
+  # only with a pair the round trips above passed with. The commit goes on top
+  # of the commit this run tested and is pushed as a fast-forward only: its
+  # one change is the two ARG defaults, which every build and test of this
+  # run received as build-args, so releasing it releases what was tested. If
+  # main moved during the run, nothing is pinned and the release below
+  # publishes nothing (main is ahead of what this run tested) - the run of
+  # the newer commit pins and releases both. GITHUB_TOKEN pushes start no
+  # workflow, so this never loops. On any other branch (a test dispatch)
+  # nothing is written.
+  pin-versions:
+    name: 📌 Pin tested SonarQube + plugin pair
+    needs: [validate-compose, validate-scripts, resolve-versions, backup-roundtrip, backup-roundtrip-upgrade]
     if: |
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       needs.validate-compose.result == 'success' &&
       needs.validate-scripts.result == 'success' &&
+      needs.resolve-versions.result == 'success' &&
       needs.backup-roundtrip.result == 'success' &&
       needs.backup-roundtrip-upgrade.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      release-ref: ${{ steps.pin.outputs.release-ref }}
+    steps:
+      - name: Checkout the tested commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - id: pin
+        shell: bash
+        env:
+          # Pass values through the environment - never interpolate them into
+          # the script body (GitHub Actions script injection).
+          SONARQUBE_VERSION: ${{ needs.resolve-versions.outputs.sonarqube-version }}
+          BRANCH_PLUGIN_VERSION: ${{ needs.resolve-versions.outputs.plugin-version }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          # The commit the release tags: the tested one, or the pin on top of it.
+          release_ref="$GITHUB_SHA"
+          df="src/sonarqube/Dockerfile"
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "Not main ($REF) - nothing is pinned (and semantic-release releases from main only)."
+          else
+            sed -i -E "s|^(ARG SONARQUBE_VERSION=).*|\1${SONARQUBE_VERSION}|" "$df"
+            sed -i -E "s|^(ARG BRANCH_PLUGIN_VERSION=).*|\1${BRANCH_PLUGIN_VERSION}|" "$df"
+            if git diff --quiet -- "$df"; then
+              echo "Dockerfile already at the tested pair - nothing to commit."
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git add "$df"
+              git commit -m "chore: pinned SonarQube ${SONARQUBE_VERSION} + branch-plugin ${BRANCH_PLUGIN_VERSION} [skip ci]"
+              if git push origin "HEAD:refs/heads/main"; then
+                release_ref="$(git rev-parse HEAD)"
+                echo "Pinned as ${release_ref}"
+              elif [ "$(git ls-remote origin refs/heads/main | cut -f1)" != "$GITHUB_SHA" ]; then
+                echo "::warning title=Pair not pinned::main moved during this run - this run releases nothing; the run of the newer commit pins and releases."
+              else
+                echo "::error title=Pair not pinned::the push to main was rejected although main is still at the tested commit"
+                exit 1
+              fi
+            fi
+          fi
+          echo "release-ref=${release_ref}" >> "$GITHUB_OUTPUT"
+
+  # ============================================
+  # Release Job (main: push or dispatch)
+  # ============================================
+  # Releases only after every gate passed, and only the commit this run
+  # tested (ref) - semantic-release publishes nothing when main has moved
+  # past it, and nothing from any branch but main.
+
+  release:
+    name: 📦 Create Semantic Release
+    needs: [validate-compose, validate-scripts, resolve-versions, backup-roundtrip, backup-roundtrip-upgrade, pin-versions]
+    if: |
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      needs.validate-compose.result == 'success' &&
+      needs.validate-scripts.result == 'success' &&
+      needs.resolve-versions.result == 'success' &&
+      needs.backup-roundtrip.result == 'success' &&
+      needs.backup-roundtrip-upgrade.result == 'success' &&
+      needs.pin-versions.result == 'success'
     uses: bauer-group/automation-templates/.github/workflows/modules-semantic-release.yml@main
     with:
       target-branch: 'main'
+      # github.sha, or the pin commit on top of it (see pin-versions).
+      ref: ${{ needs.pin-versions.outputs.release-ref || github.sha }}
       dry-run: false
       force-release: ${{ inputs.force-release || false }}
     secrets: inherit

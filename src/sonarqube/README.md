@@ -33,7 +33,8 @@ current automatically, so the Dockerfile always shows what's actually built:
 
 The CI `resolve-versions` job finds the newest **plugin-compatible** pair
 (latest branch-plugin release → newest matching `…-community` SonarQube tag),
-builds with it, **and commits the pair back into these `ARG` lines** (GITHUB_TOKEN
+builds and tests with it, and once the backup round trips passed the
+`pin-versions` job **commits the pair back into these `ARG` lines** (GITHUB_TOKEN
 pushes don't re-trigger CI, so it never loops). The daily base-image monitor
 re-runs it on `sonarqube:community` drift. Net effect: published image == this
 Dockerfile, always current, fully reproducible — see
