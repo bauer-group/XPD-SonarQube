@@ -1,12 +1,12 @@
 # =============================================================================
 # Dependabot Maintenance — Auto-merge tested Dependabot PRs
 # =============================================================================
-# Auto-approves and squash-merges a Dependabot patch update — base-image bumps
-# (Dockerfiles) and docker-compose image tags — once docker-release.yml (image
-# builds and the backup round trip) has passed on the PR head commit and no
-# other check failed. Minor and major updates stay open for review, and so do
-# GitHub Action version bumps: they change the CI itself, so no CI run can
-# vouch for them.
+# Auto-approves and squash-merges a Dependabot patch or minor update —
+# base-image bumps (Dockerfiles) and docker-compose image tags — once
+# docker-release.yml (image builds and the backup round trip) has passed on
+# the PR head commit and no other check failed. Major updates (a 0.x minor
+# counts as major) stay open for review, and so do GitHub Action version
+# bumps: they change the CI itself, so no CI run can vouch for them.
 # =============================================================================
 
 name: 🔧 Dependabot Maintenance
