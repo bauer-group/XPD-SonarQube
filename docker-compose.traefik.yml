@@ -151,6 +151,11 @@ services:
       SONAR_WEB_JAVAOPTS: ${SONAR_WEB_JAVAOPTS:--Xmx512m -Xms128m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt/sonarqube/data}
       SONAR_CE_JAVAOPTS: ${SONAR_CE_JAVAOPTS:--Xmx512m -Xms128m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt/sonarqube/data}
       SONAR_SEARCH_JAVAOPTS: ${SONAR_SEARCH_JAVAOPTS:--Xmx512m -Xms512m -XX:MaxDirectMemorySize=256m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/opt/sonarqube/data}
+      # A newer SonarQube waits in DB_MIGRATION_NEEDED (not healthy) until its
+      # database migration starts; the image starts it by itself. false: start
+      # it by hand (docs/upgrade.md). The timeout only ends the watching.
+      SONARQUBE_AUTO_MIGRATE: ${SONARQUBE_AUTO_MIGRATE:-true}
+      SONARQUBE_AUTO_MIGRATE_TIMEOUT_SECONDS: ${SONARQUBE_AUTO_MIGRATE_TIMEOUT_SECONDS:-3600}
     ulimits:
       nofile:
         soft: 131072
@@ -174,7 +179,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 6
-      start_period: 120s
+      # Covers a database migration after an update (the image starts it,
+      # docs/upgrade.md): failed probes only count after 10 minutes, so a
+      # long migration does not mark the container unhealthy. A probe that
+      # passes earlier ends the start period at once.
+      start_period: 600s
     networks:
       local:
       proxy:

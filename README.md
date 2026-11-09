@@ -18,6 +18,7 @@ images, `semantic-release`, Dependabot and daily base-image monitoring.
 | 🐘 **PostgreSQL** | Tuned `postgres:18-alpine` (no pgvector needed) |
 | 🔐 **HTTPS** | Traefik + Let's Encrypt on a dedicated subdomain |
 | ⚙️ **Kernel-ready** | Privileged init sidecar sets `vm.max_map_count` automatically |
+| 🔄 **Unattended upgrades** | The wrapper image starts the database migration a SonarQube update needs by itself ([docs/upgrade.md](docs/upgrade.md#sonarqube-database-migrations)) |
 | 💾 **Backups** | Optional scheduled `pg_dump` sidecar (S3 off-site + alerting) |
 | 🧪 **Release gate** | Every release first backs up, deletes and restores a seeded project on the full stack — fresh, and as an upgrade from the latest release with an off-site S3 copy restored on a new host, for the Coolify and Traefik files ([docs/backup.md](docs/backup.md#round-trip-test-in-ci)) |
 | 🚀 **CI/CD** | semantic-release, multi-image build, Dependabot, base-image monitor |

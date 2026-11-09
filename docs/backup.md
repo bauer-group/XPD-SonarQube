@@ -119,10 +119,11 @@ docker compose -f docker-compose.traefik.yml run --rm --no-deps --entrypoint sh 
 
 **Which SonarQube to start.** Start the release that ran when the snapshot was
 taken, or a newer one within SonarQube's upgrade path, which finds the older
-schema and asks for the migration on `/setup`
+schema and migrates it — the image starts that migration itself unless
+`SONARQUBE_AUTO_MIGRATE=false`
 ([upgrade.md](upgrade.md#sonarqube-database-migrations)) — never an older one:
 SonarQube refuses to start on a schema newer than itself. To start that very
-release, pin `SONARQUBE_VERSION` to its image tag.
+release, pin `SONARQUBE_VERSION` to its image tag before `up`.
 
 **`plain` snapshots.** Only `custom` snapshots (the default) are compared with
 the database and replace what is there. A `plain` snapshot
@@ -160,7 +161,8 @@ Without such a difference (the snapshot's own tables with changed rows, or an
 empty database) it is the plain `pg_restore` as before. Afterwards start the
 release that ran when the snapshot was taken (pin `SONARQUBE_VERSION`, see
 [upgrade.md](upgrade.md#sonarqube-database-migrations)); a newer one finds the
-snapshot's schema and asks for the migration on `/setup` again.
+snapshot's schema and migrates it again — by itself, unless
+`SONARQUBE_AUTO_MIGRATE=false`.
 
 **Sidecar version.** This needs a sidecar on BackupHelper engine 1.10.2 or
 later — sidecar release 1.3.21 and later, which `SONARQUBE_BACKUP_VERSION=latest`
@@ -269,22 +271,25 @@ production gets there, once with `docker-compose.coolify.yml` and once with
 |-------|--------------|
 | Previous release | The latest XPD-SonarQube release (`sonarqube` and `sonarqube-backup` images, release tag `vX.Y.Z` → image tag `X.Y.Z`) starts with the compose file of the commit. The module checks that both containers run the release, then the release seeds the project and backs it up with its own sidecar |
 | Off-site copy | A throwaway MinIO is the S3 destination (`SONARQUBE_BACKUP_S3_*` point at it); archive and manifest must be in the bucket with the local size |
-| Upgrade | [`upgrade.sh`](../tests/backup-roundtrip/upgrade.sh) renames the previous release's branch plugin JAR to a version no image ships — what a SonarQube bump leaves in the `extensions` volume Compose carries over — and starts the database migration watcher. Then the images built from the commit take over `sonarqube:latest` and `sonarqube-backup:latest`, and `docker compose up -d` recreates both containers. Both must then run the build of the commit, compared by the image id tagged before `up`, and SonarQube must start with the plugin of the new image. The project must still be there, and `backuphelper healthcheck` must pass in the new sidecar |
+| Upgrade | [`upgrade.sh`](../tests/backup-roundtrip/upgrade.sh) renames the previous release's branch plugin JAR to a version no image ships — what a SonarQube bump leaves in the `extensions` volume Compose carries over. Then the images built from the commit take over `sonarqube:latest` and `sonarqube-backup:latest`, and `docker compose up -d` recreates both containers. Both must then run the build of the commit, compared by the image id tagged before `up`, and SonarQube must start with the plugin of the new image. The project must still be there, and `backuphelper healthcheck` must pass in the new sidecar |
 | New host | After the project is deleted, the `sonarqube-backup` container is removed and its data volume emptied; the new sidecar must list the snapshot as `(off-site only)` |
 | Restore | The new sidecar restores the **previous release's** snapshot, downloading it from S3 first; the check must find the project again, and the downloaded snapshot must pass `verify` |
 
 **Database migrations.** When the commit moves to a newer SonarQube than the
 latest release runs, the new SonarQube finds an older schema and waits in
-`DB_MIGRATION_NEEDED` — not `UP`, so not healthy — until someone starts the
-migration on `/setup` ([upgrade.md](upgrade.md#sonarqube-database-migrations)).
+`DB_MIGRATION_NEEDED` — not `UP`, so not healthy — until the migration starts.
 The restore puts that older schema back, dropping the tables the newer version
-added, so it asks again after the restore.
-[`migrate-db.sh`](../tests/backup-roundtrip/migrate-db.sh), which `upgrade.sh`
-starts in the background, is that operator: whenever SonarQube reports
-`DB_MIGRATION_NEEDED`, it calls `POST api/system/migrate_db`, the call `/setup`
-makes. It changes nothing else: SonarQube must still become healthy within the
-wait timeout, and the check must still find the project. Its log,
-`sonarqube-migrate-db.log`, is part of the diagnostics artifact.
+added, so it asks again after the restore. Nothing in the round trip starts
+it: the image built from the commit has to do that itself
+([upgrade.md](upgrade.md#sonarqube-database-migrations)), at the upgrade and
+after the restore, or SonarQube never becomes healthy within the wait timeout
+and the job fails. [`check.sh`](../tests/backup-roundtrip/check.sh) also reads
+the watcher's lines, tagged `[auto-migrate]`, whenever the container runs the
+image built from the commit (in both round trips; not the previous release):
+those of the latest container start must end in `SonarQube status: UP` and
+hold no `ERROR`, or the check fails — so the watcher is proven on every run,
+with or without a migration. They are also in the `sonarqube` log of the
+diagnostics artifact.
 
 The Traefik variant joins the external network `PROXY_NETWORK` names; the job
 creates it for the run. Traefik itself is not started, so its routing is not

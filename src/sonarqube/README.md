@@ -5,6 +5,8 @@ Community Build image with the
 [Community Branch Plugin](https://github.com/mc1arke/sonarqube-community-branch-plugin)
 baked in: the image keeps it in `/opt/sonarqube/bundled-plugins/` and its
 entrypoint installs it into `/opt/sonarqube/extensions/plugins/` on every start.
+After a SonarQube update the entrypoint also starts the database migration the
+new version needs, so the update finishes without anyone opening `/setup`.
 
 Published as `ghcr.io/bauer-group/xpd-sonarqube/sonarqube`.
 
@@ -18,8 +20,43 @@ Published as `ghcr.io/bauer-group/xpd-sonarqube/sonarqube`.
   version of the bundled plugins there with the image's own before SonarQube
   starts. Without it, the first plugin bump would leave the previous version in
   place and SonarQube would not start.
+* **Unattended updates.** A SonarQube that finds an older database schema
+  waits in maintenance mode (`DB_MIGRATION_NEEDED`, not healthy, unreachable
+  behind the proxy) until someone starts the migration. The entrypoint starts
+  it itself — see [below](#automatic-database-migration).
 * **Sovereign re-publish.** The stack keeps working from our own registry even
   if upstream tags move.
+
+## Automatic database migration
+
+Before it hands over to the upstream entrypoint, `entrypoint.sh` starts a
+watcher in the background; SonarQube starts at once, the watcher runs next to
+it. It polls `http://localhost:${SONAR_WEB_PORT:-9000}${SONAR_WEB_CONTEXT}/api/system/status`
+every 5 seconds, logs each status change to the container log tagged
+`[auto-migrate]`, and:
+
+| Status | Watcher |
+| --- | --- |
+| not answering, `STARTING`, `RESTARTING` | waits |
+| `DB_MIGRATION_NEEDED` | POSTs `api/system/migrate_db` (what `/setup` does); an answer without a state — none, a timeout, an error page — is retried while the status stays, 3 POSTs at most |
+| `DB_MIGRATION_RUNNING` | waits, never sends anything |
+| `UP` | ends |
+| `DOWN` — the migration failed | logs an `ERROR` with `api/system/db_migration_status` and ends; nothing retries it |
+| `migrate_db` answers `MIGRATION_FAILED` or `NOT_SUPPORTED` | logs an `ERROR` and ends, without another POST |
+
+| Variable | Default | |
+| --- | --- | --- |
+| `SONARQUBE_AUTO_MIGRATE` | `true` | `false` (also `0`, `no`, `off`): no watcher, a migration waits for `/setup` |
+| `SONARQUBE_AUTO_MIGRATE_TIMEOUT_SECONDS` | `3600` | the watcher ends after this many seconds (decimal, up to 9 digits; otherwise a `WARN` and 3600); a running migration goes on |
+
+It only runs when the container starts SonarQube itself, not for another
+command (`docker run … <image> bash`). Nothing is backed up before the
+migration — the newest restore point is the backup sidecar's last scheduled
+snapshot; see [`docs/upgrade.md`](../../docs/upgrade.md#sonarqube-database-migrations)
+for backups, starting a migration by hand and rolling back. The watcher is a
+child of the SonarQube launcher (PID 1), which does not reap it: once it ended,
+it stays a `<defunct>` entry in the process list until the container stops —
+one per start, holding no memory or files.
 
 ## Versions: pinned in the Dockerfile, auto-maintained
 

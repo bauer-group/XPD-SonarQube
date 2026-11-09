@@ -245,10 +245,13 @@ jobs:
       # Both images start as the latest release (vX.Y.Z -> image tag X.Y.Z)
       # and are upgraded to this commit's builds.
       upgrade-from: 'latest-release'
-      # A newer SonarQube waits in DB_MIGRATION_NEEDED (unhealthy) until the
-      # operator starts the migration on /setup (docs/upgrade.md). The script
-      # starts a watcher that does that step - at the upgrade and after the
-      # restore of the old snapshot - and nothing else.
+      # The script leaves the previous release's branch plugin behind like a
+      # SonarQube bump does. It does NOT start the database migration: a newer
+      # SonarQube waits in DB_MIGRATION_NEEDED (unhealthy) until the image
+      # built from this commit starts it itself (SONARQUBE_AUTO_MIGRATE,
+      # docs/upgrade.md) - at the upgrade and after the restore of the old
+      # snapshot - or 'up --wait' times out and the job fails. check.sh also
+      # requires the image's [auto-migrate] lines to end in UP, without ERROR.
       upgrade-script: 'tests/backup-roundtrip/upgrade.sh'
       # setting VARIABLE: the .env variables the compose files build the S3
       # destination from. The engine addresses buckets path-style by default.
