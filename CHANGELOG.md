@@ -4,6 +4,18 @@ All notable changes to this project are documented here. This file is maintained
 automatically by [semantic-release](https://github.com/semantic-release/semantic-release)
 on every release to `main`.
 
+## [1.4.0](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.30...v1.4.0) (2026-11-09)
+
+### 🚀 Features
+
+* **sonarqube:** added automatic database migration on start ([aaca9da](https://github.com/bauer-group/XPD-SonarQube/commit/aaca9dafe0c6c32d23e122f05ac24c7c83f72dec))
+
+### 🔧 Maintenance
+
+* pinned SonarQube 26.8.0.126808-community + branch-plugin 26.8.0 [skip ci] ([68b71a5](https://github.com/bauer-group/XPD-SonarQube/commit/68b71a5be8c1dd334ffb72dd4f465553d9b3c649))
+* update Dockerfile version to 1.3.30 ([8c0fdb4](https://github.com/bauer-group/XPD-SonarQube/commit/8c0fdb4658e01e6dc25b865485514f22c74864a3))
+* update Dockerfile version to 1.3.30 ([21ad463](https://github.com/bauer-group/XPD-SonarQube/commit/21ad463f422c6e9e6090458331c96bebfa6a3636))
+
 ## [1.3.30](https://github.com/bauer-group/XPD-SonarQube/compare/v1.3.29...v1.3.30) (2026-11-07)
 
 ### 🔧 Maintenance
