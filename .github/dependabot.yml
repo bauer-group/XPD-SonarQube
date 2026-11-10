@@ -14,6 +14,15 @@
 # (daily cron). The SonarQube ↔ branch-plugin version pair is resolved by the
 # resolve-versions job of docker-release.yml on every build (see
 # docs/upgrade.md) — Dependabot does not track the GitHub-release JAR.
+#
+# The commit prefix decides whether a merged update is released
+# (docker-maintenance.yml dispatches docker-release.yml after the merge):
+# fix(...) cuts a PATCH release and rebuilds the images, chore(...) releases
+# nothing. Everything that ships uses fix(docker): the Dockerfile base images
+# and the docker-compose files, which are the deployed stack. GitHub Actions
+# updates change only the CI and keep chore(ci). No include: "scope" - the
+# prefixes already have one, and Dependabot would append "(deps)" to it
+# (fix(docker)(deps): ...).
 # =============================================================================
 
 version: 2
@@ -46,7 +55,7 @@ updates:
       - "docker"
       - "dependabot"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "fix(docker)"
 
   # sonarqube wrapper base image (sonarqube:<ver>-community in src/sonarqube/Dockerfile)
   - package-ecosystem: "docker"
@@ -61,7 +70,7 @@ updates:
       - "docker"
       - "dependabot"
     commit-message:
-      prefix: "chore(docker)"
+      prefix: "fix(docker)"
 
   # sonarqube-backup base image (FROM the central BackupHelper image in src/sonarqube-backup/Dockerfile)
   - package-ecosystem: "docker"
@@ -76,4 +85,4 @@ updates:
       - "docker"
       - "dependabot"
     commit-message:
-      prefix: "chore(docker)"
+      prefix: "fix(docker)"

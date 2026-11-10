@@ -79,6 +79,8 @@ jobs:
       contents: write
     outputs:
       build-args: ${{ steps.r.outputs.build-args }}
+      # The commit the release job releases - see "Release ref" below.
+      release-ref: ${{ steps.r.outputs.release-ref }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -128,6 +130,21 @@ jobs:
             echo "__ARGS__"
           } >> "$GITHUB_OUTPUT"
 
+          # ── Release ref ─────────────────────────────────────────────────────
+          # The commit the release job releases (modules-semantic-release ref).
+          # The gates build the trigger commit (github.sha) with the pair above
+          # as build-args. The pin commit below changes nothing but these two
+          # ARG defaults, so when it sits directly on the trigger commit it is
+          # exactly what the gates tested - and, as the new tip of main, the
+          # only commit semantic-release will release (an older one is behind
+          # the remote branch and releases nothing). It is released only then.
+          # Otherwise - PR, nothing to pin, pin commit rewritten or dropped by a
+          # rebase onto a main that moved, or never pushed - the trigger commit
+          # is.
+          # The trap writes the output on every exit path below.
+          release_ref="$GITHUB_SHA"
+          trap 'echo "release-ref=${release_ref}" | tee -a "$GITHUB_OUTPUT"' EXIT
+
           # ── Commit the resolved pair BACK into the Dockerfile ARGs ──────────
           # Keeps the Dockerfile the single source of truth: published == file.
           # Skipped on PRs. GITHUB_TOKEN pushes do NOT re-trigger workflows, so
@@ -144,12 +161,23 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "$df"
           git commit -m "chore: pinned SonarQube ${sq} + branch-plugin ${plugin} [skip ci]"
+          pin_commit="$(git rev-parse HEAD)"
+          pushed=false
           for attempt in 1 2 3; do
-            if git push; then echo "pushed"; break; fi
+            if git push; then pushed=true; echo "pushed"; break; fi
             echo "push rejected — rebasing (attempt ${attempt})…"
             git pull --rebase --autostash origin "$REF"
             sleep 3
           done
+          # Released only if HEAD is still our own pin commit (not rewritten or
+          # dropped by a rebase - a pull --rebase drops it when main already
+          # carries the same change, and HEAD is then someone else's commit)
+          # and its parent is the trigger commit (the checkout found main at
+          # github.sha).
+          if [ "$pushed" = true ] && [ "$(git rev-parse HEAD)" = "$pin_commit" ] \
+             && [ "$(git rev-parse HEAD^)" = "$GITHUB_SHA" ]; then
+            release_ref="$pin_commit"
+          fi
 
   # ============================================
   # Backup round trip (gates every release)
@@ -273,21 +301,44 @@ jobs:
     secrets: inherit
 
   # ============================================
-  # Release Job (only on main branch push)
+  # Release Job (push to main or dispatch)
   # ============================================
+  # Needs every gate: the validations, the backup round trips and both image
+  # builds. A failed gate skips the release and the image push.
 
   release:
     name: 📦 Create Semantic Release
-    needs: [validate-compose, validate-scripts, backup-roundtrip, backup-roundtrip-upgrade]
+    needs:
+      - validate-compose
+      - validate-scripts
+      - resolve-versions
+      - backup-roundtrip
+      - backup-roundtrip-upgrade
+      - docker-build-sonarqube-validate
+      - docker-build-backup-validate
     if: |
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       needs.validate-compose.result == 'success' &&
       needs.validate-scripts.result == 'success' &&
+      needs.resolve-versions.result == 'success' &&
+      needs.resolve-versions.outputs.release-ref != '' &&
       needs.backup-roundtrip.result == 'success' &&
-      needs.backup-roundtrip-upgrade.result == 'success'
+      needs.backup-roundtrip-upgrade.result == 'success' &&
+      needs.docker-build-sonarqube-validate.result == 'success' &&
+      needs.docker-build-backup-validate.result == 'success'
     uses: bauer-group/automation-templates/.github/workflows/modules-semantic-release.yml@main
     with:
       target-branch: 'main'
+      # Release the commit this run tested, never the tip of main as such:
+      # unpinned, a push that landed meanwhile would be tagged untested and
+      # be missing from the images. resolve-versions names the commit - the
+      # trigger commit, or its own pin commit when that sits directly on it
+      # (it only changes the ARG defaults the gates built with as
+      # build-args); with github.sha alone a run that pinned a new pair
+      # would be one commit behind main and release nothing. If main has
+      # moved on, nothing is released; the next run whose commit is the tip
+      # of main releases it.
+      ref: ${{ needs.resolve-versions.outputs.release-ref }}
       dry-run: false
       force-release: ${{ inputs.force-release || false }}
     secrets: inherit
@@ -298,6 +349,14 @@ jobs:
   # SonarQube Community Build + Community Branch Plugin baked in.
   # Version pinning lives in src/sonarqube/Dockerfile ARG defaults.
 
+  # Only a run that created a release publishes - never a PR, a branch
+  # dispatch or a run that released nothing. docker-build.yml has no ref
+  # input and checks out the trigger commit (github.sha), not the released
+  # pin commit; the image is the same, because the pin commit changes only
+  # the SONARQUBE_VERSION and BRANCH_PLUGIN_VERSION defaults and the
+  # build-args below set both to the pinned pair (only the image's revision
+  # label names the trigger commit). The sonarqube-backup image is not
+  # touched by the pin commit at all.
   docker-build-sonarqube-release:
     name: 🐳 Build & Push sonarqube
     needs: [release, resolve-versions]
@@ -328,13 +387,16 @@ jobs:
       sync-dockerhub-readme: false
     secrets: inherit
 
-  docker-build-sonarqube-pr:
-    name: 🔨 Validate sonarqube Build (PR)
+  # Builds the image from this commit on every event and never pushes it -
+  # the PR CI that docker-maintenance.yml waits for, and on a push or
+  # dispatch a gate of the release.
+  docker-build-sonarqube-validate:
+    name: 🔨 Validate sonarqube Build
     needs: [validate-compose, validate-scripts, resolve-versions]
     if: |
-      github.event_name == 'pull_request' &&
       needs.validate-compose.result == 'success' &&
-      needs.validate-scripts.result == 'success'
+      needs.validate-scripts.result == 'success' &&
+      needs.resolve-versions.result == 'success'
     uses: bauer-group/automation-templates/.github/workflows/docker-build.yml@main
     with:
       publish-to: 'ghcr'
@@ -385,11 +447,11 @@ jobs:
       sync-dockerhub-readme: false
     secrets: inherit
 
-  docker-build-backup-pr:
-    name: 🔨 Validate sonarqube-backup Build (PR)
+  # Like docker-build-sonarqube-validate: every event, never pushed.
+  docker-build-backup-validate:
+    name: 🔨 Validate sonarqube-backup Build
     needs: [validate-compose, validate-scripts]
     if: |
-      github.event_name == 'pull_request' &&
       needs.validate-compose.result == 'success' &&
       needs.validate-scripts.result == 'success'
     uses: bauer-group/automation-templates/.github/workflows/docker-build.yml@main
