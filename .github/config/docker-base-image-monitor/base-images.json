@@ -26,9 +26,9 @@
     {
       "name": "busybox",
       "image": "busybox",
-      "tag": "stable",
+      "tag": "1",
       "variable": "BUSYBOX_DIGEST",
-      "description": "Kernel-init sidecar that sets vm.max_map_count (pulled by compose). Floating stable tag."
+      "description": "Kernel-init sidecar that sets vm.max_map_count (pulled by compose, no Dockerfile, so 'tag' must match SONARQUBE_INIT_VERSION in the compose files). Major-floating: upstream rebuilds '1' on every BusyBox/buildroot release. Not 'stable': upstream dropped that alias in 2026-05, it is frozen on 1.36.1."
     }
   ],
   "settings": {
