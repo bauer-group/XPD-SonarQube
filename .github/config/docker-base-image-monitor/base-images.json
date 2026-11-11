@@ -12,7 +12,7 @@
     {
       "name": "backuphelper",
       "image": "ghcr.io/bauer-group/cs-backuphelper/backuphelper",
-      "tag": "latest",
+      "dockerfile": "src/sonarqube-backup/Dockerfile",
       "variable": "BACKUPHELPER_DIGEST",
       "description": "Central BackupHelper engine — floating base of the sonarqube-backup meta image. On digest drift, docker-release.yml rebuilds/republishes the backup sidecar."
     },
