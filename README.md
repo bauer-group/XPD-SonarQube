@@ -92,7 +92,7 @@ drift — there are no version numbers to maintain by hand.
 | Branch plugin  | derived from base     | Dockerfile (no pin)             |
 | PostgreSQL     | `postgres:18-alpine`  | patch-floating                  |
 | Backup base    | `backuphelper:latest` | base-image monitor + Dependabot |
-| Init sidecar   | `busybox:stable`      | floating                        |
+| Init sidecar   | `busybox:1`           | major-floating                  |
 | Wrapper images | `sonarqube:latest`    | CI + base-image monitor         |
 
 The Community Build only analyses the main branch natively — the bundled
