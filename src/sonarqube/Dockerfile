@@ -22,8 +22,8 @@
 #   Plugin: https://github.com/mc1arke/sonarqube-community-branch-plugin
 # =============================================================================
 
-ARG SONARQUBE_VERSION=26.8.0.126808-community
-ARG BRANCH_PLUGIN_VERSION=26.8.0
+ARG SONARQUBE_VERSION=26.9.0.129388-community
+ARG BRANCH_PLUGIN_VERSION=26.9.0
 # Generic-OIDC SSO (e.g. Zitadel) needs the third-party sonar-auth-oidc plugin.
 # Included by default — verified booting on SonarQube 26.5 (plugin v3.0.0 loads
 # and registers cleanly). Set INCLUDE_OIDC_PLUGIN=false to omit it. Used for
